@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+      "target": "es2018",
+      "module": "commonjs",
+      "strict": true,
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true,
+      "types": ["mocha", "chai", "node"],
+      "resolveJsonModule": true
+    },
+    "include": ["src/**/*", "test/**/*"],
+    "exclude": ["node_modules"]
+}
