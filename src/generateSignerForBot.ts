@@ -5,7 +5,7 @@ import { viemPublicClient } from "./viemClient";
 import { keyGatewayAbi } from "../abi/keyGateway";
 import { encodeAbiParameters } from "viem";
 import { SignedKeyRequestMetadataABI } from "../abi/SignedKeyRequestMetadata";
-import { SignerStatusEnum } from "@neynar/nodejs-sdk/build/neynar-api/neynar-v2-api";
+import { SignerStatusEnum } from "@neynar/nodejs-sdk/build/api";
 import * as fs from "fs";
 import * as path from "path";
 import { isApiErrorResponse } from "@neynar/nodejs-sdk";
@@ -72,7 +72,7 @@ export const getApprovedSigner = async () => {
 
     // Lookup user details using the custody address.
     const { user: farcasterDeveloper } =
-      await neynarClient.lookupUserByCustodyAddress(account.address);
+      await neynarClient.lookupUserByCustodyAddress({custodyAddress: account.address});
 
     console.log(
       `✅ Detected user with fid ${farcasterDeveloper.fid} and custody address: ${farcasterDeveloper.custody_address}`
@@ -179,7 +179,7 @@ export const getApprovedSigner = async () => {
 
     // Polling for the signer status until it is approved.
     while (true) {
-      const res = await neynarClient.lookupSigner(signer_uuid);
+      const res = await neynarClient.lookupSigner({signerUuid: signer_uuid});
       if (res && res.status === SignerStatusEnum.Approved) {
         console.log("✅ Approved signer", signer_uuid);
         break;
