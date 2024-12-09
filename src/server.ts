@@ -15,7 +15,7 @@ const server = Bun.serve({
       // TODO: retrieve cast information and pass it to respondToMessage
       // TODO: retrieve cast hash to return in the response
       // respond to the cast
-      const reply = await respondToMessage(hookData.data.text);
+      const reply = await respondToMessage(hookData);
 
       return new Response(`Replied to the cast with hash: ${reply.hash}`);
     } catch (e: any) {

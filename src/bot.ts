@@ -1,4 +1,4 @@
-import { isApiErrorResponse } from "@neynar/nodejs-sdk";
+import { isApiErrorResponse } from '@neynar/nodejs-sdk';
 import { ChatGPTAPI } from 'chatgpt';
 
 import neynarClient from "./neynarClient";
@@ -27,12 +27,16 @@ const chatGPT = new ChatGPTAPI({
     apiKey: OPENAI_API_KEY
 });
 
+// TODO: update the hookData type - it's a PostCastResponseCast but the type is not exported
 /**
  * Function to generate a message in response to a user's message.
  * @param userMessage - The user's message triggering the bot.
  */
-export async function respondToMessage(userMessage: string): Promise<{ hash: string; response: string; }> {
+export async function respondToMessage(hookData: any): Promise<{ hash: string; response: string; }> {
     try {
+        // Retrieve the user's message from the hook data
+        const userMessage = hookData.data.text;
+
         // Parse the message to get project details
         const { tokenTicker, tokenAddress, escrowAmount } = parseUserMessage(userMessage);
 
@@ -55,7 +59,7 @@ export async function respondToMessage(userMessage: string): Promise<{ hash: str
         const response = await chatGPT.sendMessage(prompt);
 
         // publish the response to farcaster
-        const hash = await publishCast(response.text);
+        const hash = await publishCast(response.text, hookData.data.hash);
 
         return { hash, response: response.text };
 
@@ -72,15 +76,19 @@ export async function respondToMessage(userMessage: string): Promise<{ hash: str
     }
 }
 
-// TODO: retrieve the parent cast hash from the hook data
 /**
  * Function to publish a message (cast) using neynarClient.
  * @param msg - The message to be published.
+ * @param parentCastHash - The hash of the parent cast.
  */
-const publishCast = async (msg: string): Promise<string> => {
+const publishCast = async (msg: string, parentCastHash: string): Promise<string> => {
     try {
-      // Using the neynarClient to publish the cast.
-      const postCastResponse = await neynarClient.publishCast({ signerUuid: SIGNER_UUID, text: msg });
+      // Use the neynarClient to publish the cast.
+      const postCastResponse = await neynarClient.publishCast({
+        signerUuid: SIGNER_UUID,
+        text: msg,
+        parent: parentCastHash
+      });
       console.log("Cast published successfully");
       return postCastResponse.cast.hash;
     } catch (err) {
