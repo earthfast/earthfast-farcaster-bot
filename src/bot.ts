@@ -1,11 +1,11 @@
 import { isApiErrorResponse } from '@neynar/nodejs-sdk';
-import { ChatGPTAPI } from 'chatgpt';
+import OpenAI from "openai";
 
 import neynarClient from "./neynarClient";
 import {
   SIGNER_UUID,
   NEYNAR_API_KEY,
-  OPENAI_API_KEY
+  OPENROUTER_API_KEY
 } from "./config";
 import createSubProject, { parseUserMessage } from "./createSubProject";
 
@@ -18,13 +18,17 @@ if (!SIGNER_UUID) {
   throw new Error("NEYNAR_API_KEY is not defined");
 }
 
-if (!OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY is not defined");
+if (!OPENROUTER_API_KEY) {
+    throw new Error("OPENROUTER_API_KEY is not defined");
 }
 
-// Initialize ChatGPT API
-const chatGPT = new ChatGPTAPI({
-    apiKey: OPENAI_API_KEY
+// Initialize OpenRouter client
+const openai = new OpenAI({
+    baseURL: "https://openrouter.ai/api/v1",
+    apiKey: OPENROUTER_API_KEY,
+    defaultHeaders: {
+        "X-Title": "PagePlex",
+    }
 });
 
 // TODO: update the hookData type - it's a PostCastResponseCast but the type is not exported
@@ -42,7 +46,7 @@ export async function respondToMessage(hookData: any): Promise<{ hash: string; r
         // Create the sub project
         await createSubProject(hookData.data);
 
-        // Generate a contextual response using ChatGPT
+        // Generate a contextual response using OpenRouter
         const prompt = `
             Generate a friendly and concise response (max 280 characters) for a user who just created a sub-project with these details:
             - Token: ${tokenTicker}
@@ -55,13 +59,21 @@ export async function respondToMessage(hookData: any): Promise<{ hash: string; r
             4. Use no more than 1-2 emojis
         `;
 
-        const response = await chatGPT.sendMessage(prompt);
-        console.log("AI generated response", response);
+        const completion = await openai.chat.completions.create({
+            model: "openai/gpt-3.5-turbo",
+            messages: [{
+                role: "user",
+                content: prompt
+            }]
+        });
+
+        const responseContent = completion.choices[0]?.message?.content || "Project created successfully!";
+        console.log("AI generated response", responseContent);
 
         // publish the response to farcaster
-        const hash = await publishCast(response.text, hookData.data.hash);
+        const hash = await publishCast(responseContent, hookData.data.hash);
 
-        return { hash, response: response.text };
+        return { hash, response: responseContent };
 
     } catch (error) {
         if (error instanceof Error) {

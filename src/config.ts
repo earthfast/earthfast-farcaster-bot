@@ -6,3 +6,4 @@ export const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY!;
 export const SIGNER_UUID = process.env.SIGNER_UUID!;
 export const JSON_RPC_URL = process.env.JSON_RPC_URL!;
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
+export const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!;
