@@ -30,18 +30,17 @@ const chatGPT = new ChatGPTAPI({
 // TODO: update the hookData type - it's a PostCastResponseCast but the type is not exported
 /**
  * Function to generate a message in response to a user's message.
- * @param userMessage - The user's message triggering the bot.
+ * @param hookData - The cast triggering the bot.
  */
 export async function respondToMessage(hookData: any): Promise<{ hash: string; response: string; }> {
     try {
-        // Retrieve the user's message from the hook data
-        const userMessage = hookData.data.text;
+        console.log("responding to message");
 
         // Parse the message to get project details
-        const { tokenTicker, tokenAddress, escrowAmount } = parseUserMessage(userMessage);
+        const { tokenTicker, tokenAddress, escrowAmount } = parseUserMessage(hookData.data.text);
 
         // Create the sub project
-        await createSubProject(userMessage);
+        await createSubProject(hookData.data);
 
         // Generate a contextual response using ChatGPT
         const prompt = `
@@ -57,6 +56,7 @@ export async function respondToMessage(hookData: any): Promise<{ hash: string; r
         `;
 
         const response = await chatGPT.sendMessage(prompt);
+        console.log("AI generated response", response);
 
         // publish the response to farcaster
         const hash = await publishCast(response.text, hookData.data.hash);
@@ -83,6 +83,7 @@ export async function respondToMessage(hookData: any): Promise<{ hash: string; r
  */
 const publishCast = async (msg: string, parentCastHash: string): Promise<string> => {
     try {
+      console.log("publishing cast");
       // Use the neynarClient to publish the cast.
       const postCastResponse = await neynarClient.publishCast({
         signerUuid: SIGNER_UUID,

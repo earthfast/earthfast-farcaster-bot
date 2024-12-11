@@ -16,6 +16,7 @@
   "dependencies": {
     "@neynar/nodejs-sdk": "^2.0.5",
     "@types/node": "^20.9.0",
+    "bun": "^1.1.38",
     "chatgpt": "^5.2.5",
     "dotenv": "^16.3.1",
     "ethers": "^6.13.4",
