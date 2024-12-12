@@ -11,7 +11,7 @@ const server = Bun.serve({
       return new Response('Server is running', { status: 200 });
     }
 
-    // Handle incoming cast mentions
+    // Handle incoming cast mentions from neynar webhook
     try {
       const hookData = await req.json();
       console.log("Received request", hookData);

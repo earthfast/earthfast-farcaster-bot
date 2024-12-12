@@ -5,7 +5,8 @@ import neynarClient from "./neynarClient";
 import {
   SIGNER_UUID,
   NEYNAR_API_KEY,
-  OPENROUTER_API_KEY
+  OPENROUTER_API_KEY,
+  PROJECT_BUNDLE_URL
 } from "./config";
 import createSubProject, { parseUserMessage } from "./createSubProject";
 
@@ -44,7 +45,13 @@ export async function respondToMessage(hookData: any): Promise<{ hash: string; r
         const { tokenTicker, tokenAddress, escrowAmount } = parseUserMessage(hookData.data.text);
 
         // Create the sub project
-        await createSubProject(hookData.data);
+        const receipt = await createSubProject(hookData.data);
+
+        // Get the sub project ID from the transaction events
+        const subProjectCreatedEvent = receipt.logs.find(
+            (log: any) => log.eventName === 'SubProjectCreated'
+        );
+        const subProjectId = Number(subProjectCreatedEvent.args[1]);
 
         // Generate a contextual response using OpenRouter
         const prompt = `
@@ -57,6 +64,7 @@ export async function respondToMessage(hookData: any): Promise<{ hash: string; r
             2. Mention the token and amount
             3. Be encouraging and positive
             4. Use no more than 1-2 emojis
+            5. Provide a link to the sub project site: ${PROJECT_BUNDLE_URL}${subProjectId}
         `;
 
         const completion = await openai.chat.completions.create({

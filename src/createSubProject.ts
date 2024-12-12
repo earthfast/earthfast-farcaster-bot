@@ -60,8 +60,9 @@ export default async function createSubProject(hookData: any) {
     try {
         const tx = await contract.createProject(tokenAddress, caster, escrowAmount, castHash);
         console.log("Transaction hash:", tx.hash);
-        await tx.wait();
+        const receipt = await tx.wait();
         console.log("Transaction confirmed");
+        return receipt;
     } catch (error) {
         console.error("Error creating sub project:", error);
     }
