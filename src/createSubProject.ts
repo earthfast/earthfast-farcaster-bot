@@ -11,23 +11,23 @@ export function parseUserMessage(userMessage: string){
     const createParams = userMessage.split("!create")[1]?.trim();
     
     if (!createParams) {
-        throw new Error("Invalid message format. Expected: !create <token ticker> <token address> <escrow amount>");
+        throw new Error("Invalid message format. Expected: !create <chainId> <token ticker> <token address>");
     }
 
     // Take only the first three space-separated parameters
-    const [tokenTicker, tokenAddress, escrowAmount, ...rest] = createParams.split(" ").filter(Boolean);
+    const [chainId, tokenTicker, tokenAddress, ...rest] = createParams.split(" ").filter(Boolean);
 
-    if (!tokenTicker || !tokenAddress || !escrowAmount) {
-        throw new Error("Missing required parameters. Expected: !create <token ticker> <token address> <escrow amount>");
+    if (!chainId || !tokenTicker || !tokenAddress) {
+        throw new Error("Missing required parameters. Expected: !create <chainId> <token ticker> <token address>");
     }
 
-    return { tokenTicker, tokenAddress, escrowAmount };
+    return { chainId, tokenTicker, tokenAddress };
 }
 
 export default async function createSubProject(hookData: any) {
     console.log("creating sub project");
 
-    const { tokenAddress, escrowAmount } = parseUserMessage(hookData.text);
+    const { chainId, tokenTicker, tokenAddress } = parseUserMessage(hookData.text);
     const provider = new ethers.JsonRpcProvider(JSON_RPC_URL);
     
     // Use the same mnemonic that Neynar uses
@@ -58,7 +58,7 @@ export default async function createSubProject(hookData: any) {
     const castHash = hookData.hash;
 
     try {
-        const tx = await contract.createProject(tokenAddress, caster, escrowAmount, castHash);
+        const tx = await contract.createProject(chainId, tokenTicker, tokenAddress, caster, castHash);
         console.log("Transaction hash:", tx.hash);
         const receipt = await tx.wait();
         console.log("Transaction confirmed");

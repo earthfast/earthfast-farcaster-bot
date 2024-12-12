@@ -26,7 +26,7 @@ export const sampleRequest = {
             ],
             "active_status": "inactive"
         },
-        "text": "gm pagePlex please build a site for me !create testCoin 0x1234567890123456789012345678901234567890 100",
+        "text": "gm pagePlex please build a site for me !create 1 testCoin 0x1234567890123456789012345678901234567890",
         "timestamp": "2024-02-15T19:23:22.000Z",
         "embeds": [],
         "reactions": {

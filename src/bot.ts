@@ -42,7 +42,7 @@ export async function respondToMessage(hookData: any): Promise<{ hash: string; r
         console.log("responding to message");
 
         // Parse the message to get project details
-        const { tokenTicker, tokenAddress, escrowAmount } = parseUserMessage(hookData.data.text);
+        const { chainId, tokenTicker, tokenAddress } = parseUserMessage(hookData.data.text);
 
         // Create the sub project
         const receipt = await createSubProject(hookData.data);
@@ -56,8 +56,9 @@ export async function respondToMessage(hookData: any): Promise<{ hash: string; r
         // Generate a contextual response using OpenRouter
         const prompt = `
             Generate a friendly and concise response (max 280 characters) for a user who just created a sub-project with these details:
-            - Token: ${tokenTicker}
-            - Amount: ${escrowAmount}
+            - Token Name: ${tokenTicker}
+            - Token Address: ${tokenAddress}
+            - Chain ID: ${chainId}
 
             The response should:
             1. Confirm the project creation
@@ -87,7 +88,7 @@ export async function respondToMessage(hookData: any): Promise<{ hash: string; r
         if (error instanceof Error) {
             // If it's a validation error from parseUserMessage, return a helpful message
             if (error.message.includes("Expected: !create")) {
-                return { hash: "", response: "To create a sub-project, please use the format: !create <token ticker> <token address> <escrow amount> 🤖" };
+                return { hash: "", response: "To create a sub-project, please use the format: !create <chainId> <token ticker> <token address> 🤖" };
             }
             // For other errors, return a generic error message
             return { hash: "", response: "Sorry, I encountered an error while creating your sub-project. Please try again later 🔧" };
