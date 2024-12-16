@@ -25,7 +25,7 @@ const server = Bun.serve({
       // respond to the cast
       const reply = await respondToMessage(hookData);
 
-      return new Response(`Replied to the cast with hash: ${reply.hash}`);
+      return new Response(`Replied to the cast with hash: ${reply.hash}`, { status: 200 });
     } catch (e: any) {
       console.error(e);
       return new Response(e.message, { status: 500 });

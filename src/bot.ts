@@ -51,7 +51,7 @@ export async function respondToMessage(hookData: any): Promise<{ hash: string; r
         const subProjectCreatedEvent = receipt.logs.find(
             (log: any) => log.eventName === 'SubProjectCreated'
         );
-        const subProjectId = Number(subProjectCreatedEvent.args[1]);
+        const subProjectId = subProjectCreatedEvent.args[1];
 
         // Generate a contextual response using OpenRouter
         const prompt = `
@@ -69,7 +69,7 @@ export async function respondToMessage(hookData: any): Promise<{ hash: string; r
         `;
 
         const completion = await openai.chat.completions.create({
-            model: "openai/gpt-3.5-turbo",
+            model: "openai/gpt-4o-mini",
             messages: [{
                 role: "user",
                 content: prompt
