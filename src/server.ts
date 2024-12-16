@@ -20,12 +20,10 @@ const server = Bun.serve({
         throw new Error("Make sure you set SIGNER_UUID in your .env file");
       }
 
-      // TODO: retrieve cast information and pass it to respondToMessage
-      // TODO: retrieve cast hash to return in the response
-      // respond to the cast
-      const reply = await respondToMessage(hookData);
+      // respond to the cast asynchronously and return immediately to avoid duplicate processing
+      Promise.resolve().then(() => respondToMessage(hookData));
 
-      return new Response(`Replied to the cast with hash: ${reply.hash}`, { status: 200 });
+      return new Response(`Replying to the cast`, { status: 200 });
     } catch (e: any) {
       console.error(e);
       return new Response(e.message, { status: 500 });
