@@ -32,12 +32,39 @@ const openai = new OpenAI({
     }
 });
 
+/**
+ * Function to generate an error response using OpenRouter.
+ * @param error - The error message.
+ * @param parentHash - The hash of the parent cast.
+ */
+export async function errorAIResponse(error: string, parentHash: string): Promise<{ hash: string; response: string; }> {
+    const errorPrompt = `
+        Generate a friendly and concise response (max 280 characters) for a user who tried to create a sub-project but encountered an error:
+        - Error: ${error}
+    `;
+
+    const completion = await openai.chat.completions.create({
+        model: "openai/gpt-4o-mini",
+        messages: [{
+            role: "user",
+            content: errorPrompt
+        }]
+    });
+
+    const responseContent = completion.choices[0]?.message?.content || "Sorry, I encountered an error while creating your sub-project. Please try again later 🔧";
+    const hash = await publishCast(responseContent, parentHash);
+    return { hash, response: responseContent };
+}
+
 // TODO: update the hookData type - it's a PostCastResponseCast but the type is not exported
 /**
  * Function to generate a message in response to a user's message.
  * @param hookData - The cast triggering the bot.
  */
 export async function respondToMessage(hookData: any): Promise<{ hash: string; response: string; }> {
+    // retrieve parent hash used to cast success or error responses
+    const parentHash = hookData.data.hash;
+
     try {
         console.log("responding to message");
 
@@ -80,20 +107,13 @@ export async function respondToMessage(hookData: any): Promise<{ hash: string; r
         console.log("AI generated response", responseContent);
 
         // publish the response to farcaster
-        const hash = await publishCast(responseContent, hookData.data.hash);
+        const hash = await publishCast(responseContent, parentHash);
 
         return { hash, response: responseContent };
 
-    } catch (error) {
-        if (error instanceof Error) {
-            // If it's a validation error from parseUserMessage, return a helpful message
-            if (error.message.includes("Expected: !create")) {
-                return { hash: "", response: "To create a sub-project, please use the format: !create <chainId> <token ticker> <token address> 🤖" };
-            }
-            // For other errors, return a generic error message
-            return { hash: "", response: "Sorry, I encountered an error while creating your sub-project. Please try again later 🔧" };
-        }
-        return { hash: "", response: "An unexpected error occurred 😅" };
+    } catch (error: any) {
+        console.error("error responding to message", error);
+        return errorAIResponse(error.message, parentHash);
     }
 }
 
