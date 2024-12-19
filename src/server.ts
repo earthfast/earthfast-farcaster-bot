@@ -1,5 +1,7 @@
 import neynarClient from "./neynarClient";
 import { respondToMessage } from "./bot";
+import { getMarketData } from "./marketDataService";
+import { ChainId } from "./config";
 
 const server = Bun.serve({
   port: 3000,
@@ -11,7 +13,19 @@ const server = Bun.serve({
       return new Response('Server is running', { status: 200 });
     }
 
-    // Handle incoming cast mentions from neynar webhook
+    if (url.pathname === '/market-data') {
+      const address = url.searchParams.get('address');
+      const chainId = url.searchParams.get('chainId');
+
+      if (!address || !chainId) {
+        return new Response('Missing address or chainId parameter', { status: 400 });
+      }
+
+      const marketData = await getMarketData(address, parseInt(chainId) as ChainId);
+      return new Response(JSON.stringify(marketData), { status: 200 });
+    }
+
+    // Handle incoming cast mentions from neynar webhook on /
     try {
       const hookData = await req.json();
       console.log("Received request", hookData);
