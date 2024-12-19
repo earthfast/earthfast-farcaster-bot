@@ -100,19 +100,62 @@ async function fetchMarketData(address: string, chainId: ChainId): Promise<Token
         data: queryData,
     }
   
-    const response = await axios.request(config);
-  
-    console.log("BITQUERY RESPONSE: ", response);
-  
-    return {
-        price: response.data.data.EVM.DEXTradeByTokens[0].price,
-        holders: response.data.data.EVM.TokenHolders[0].uniq,
-        totalTradeVolume: response.data.data.EVM.DEXTradeByTokens[0].total_traded_volume,
-        totalTrades: response.data.data.EVM.DEXTradeByTokens[0].total_trades,
-        totalBuyVolume: response.data.data.EVM.DEXTradeByTokens[0].total_buy_volume,
-        totalSellVolume: response.data.data.EVM.DEXTradeByTokens[0].total_sell_volume,
-        totalBuys: response.data.data.EVM.DEXTradeByTokens[0].totalbuys,
-        totalSells: response.data.data.EVM.DEXTradeByTokens[0].totalsells,
+    try {
+        const response = await axios.request(config);
+        const evmData = response.data?.data?.EVM;
+
+        if (!evmData) {
+            throw new Error("No EVM data returned from Bitquery");
+        }
+
+        // Initialize with default values
+        const marketData: TokenMarketMetadata = {
+            price: 0,
+            holders: "0",
+            totalTradeVolume: "0",
+            totalTrades: "0",
+            totalBuyVolume: "0",
+            totalSellVolume: "0",
+            totalBuys: "0",
+            totalSells: "0",
+        };
+
+        // Safely extract holders data
+        try {
+            if (evmData.TokenHolders?.[0]?.uniq) {
+                marketData.holders = evmData.TokenHolders[0].uniq;
+            }
+        } catch (error) {
+            console.error("Error extracting holders data:", error);
+        }
+
+        // Safely extract DEX trade data
+        try {
+            const dexData = evmData.DEXTradeByTokens?.[0];
+            if (dexData) {
+                marketData.price = dexData.price ?? marketData.price;
+                marketData.totalTradeVolume = dexData.total_traded_volume ?? marketData.totalTradeVolume;
+                marketData.totalTrades = dexData.total_trades ?? marketData.totalTrades;
+                marketData.totalBuyVolume = dexData.total_buy_volume ?? marketData.totalBuyVolume;
+                marketData.totalSellVolume = dexData.total_sell_volume ?? marketData.totalSellVolume;
+                marketData.totalBuys = dexData.totalbuys ?? marketData.totalBuys;
+                marketData.totalSells = dexData.totalsells ?? marketData.totalSells;
+            }
+        } catch (error) {
+            console.error("Error extracting DEX trade data:", error);
+        }
+
+        return marketData;
+
+    } catch (error) {
+        console.error("Error fetching market data from Bitquery:", error);
+        throw error;
     }
 }
-  
+
+
+// BITQUERY - can get token holders + dex information
+// https://docs.bitquery.io/docs/examples/token-holders/token-holder-api/
+  // https://docs.bitquery.io/docs/evm/token-holders/
+  // https://docs.bitquery.io/docs/cubes/dextradesbyTokens/
+  // https://docs.bitquery.io/docs/usecases/Top-10-ethereum-tokens/
