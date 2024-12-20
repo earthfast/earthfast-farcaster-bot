@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from 'bun:test';
 import { sampleRequest } from './mocks/sampleRequest.js';
 
 describe('Server', () => {
@@ -8,7 +8,7 @@ describe('Server', () => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(sampleRequest)
+      body: JSON.stringify(sampleRequest),
     });
 
     expect(response.status).toBe(200);
