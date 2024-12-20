@@ -35,7 +35,7 @@ export interface StoredImage {
   prompt?: string;
 }
 
-export async function generateAndStoreImage(prompt: string, identifier: string): Promise<string> {
+export async function generateAndStoreImage(prompt: string, token: string): Promise<string> {
   try {
     console.log('Generating image with prompt:', prompt);
 
@@ -60,7 +60,7 @@ export async function generateAndStoreImage(prompt: string, identifier: string):
 
     // Generate unique filename
     const timestamp = Date.now();
-    const filename = `${identifier}-${timestamp}.png`;
+    const filename = `${token}-${timestamp}.png`;
 
     // Upload to S3
     await s3Client.send(

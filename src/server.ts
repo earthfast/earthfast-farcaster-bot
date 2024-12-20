@@ -1,6 +1,6 @@
 import { generateAndStoreImage, listStoredImages, deleteImage } from './imageService';
 import { respondToMessage } from './bot';
-import { API_SECRET_KEY, SIGNER_UUID } from './config';
+import { FARCASTER_BOT_API_KEY, SIGNER_UUID } from './config';
 
 // Authentication middleware
 const authenticateRequest = (req: Request): boolean => {
@@ -9,7 +9,7 @@ const authenticateRequest = (req: Request): boolean => {
     return false;
   }
   const token = authHeader.split(' ')[1];
-  return token === API_SECRET_KEY;
+  return token === FARCASTER_BOT_API_KEY;
 };
 
 const server = Bun.serve({
@@ -155,6 +155,7 @@ const server = Bun.serve({
           throw new Error('Make sure you set SIGNER_UUID in your .env file');
         }
 
+        // respond to the cast asynchronously and return immediately to avoid duplicate processing
         Promise.resolve().then(() => respondToMessage(hookData));
         return new Response(`Replying to the cast`, { status: 200 });
       } catch (e: any) {
