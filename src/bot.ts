@@ -64,9 +64,11 @@ export async function errorAIResponse(
  * Function to generate a message in response to a user's message.
  * @param hookData - The cast triggering the bot.
  */
-export async function respondToMessage(hookData: any): Promise<{ hash: string; response: string, imageUrl?: string }> {
+export async function respondToMessage(
+  hookData: any,
+): Promise<{ hash: string; response: string; imageUrl?: string }> {
   const parentHash = hookData.data.hash;
-  
+
   try {
     console.log('responding to message');
     const { chainId, tokenTicker, tokenAddress } = parseUserMessage(hookData.data.text);
@@ -112,7 +114,7 @@ export async function respondToMessage(hookData: any): Promise<{ hash: string; r
     const responseContent =
       completion.choices[0]?.message?.content || 'Project created successfully!';
     console.log('AI generated response', responseContent);
-    
+
     // publish the response to farcaster
     const hash = await publishCast(responseContent, parentHash);
 

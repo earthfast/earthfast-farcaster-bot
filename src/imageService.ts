@@ -35,7 +35,11 @@ export interface StoredImage {
   prompt?: string;
 }
 
-export async function generateAndStoreImage(prompt: string, token: string, filename: string): Promise<string> {
+export async function generateAndStoreImage(
+  prompt: string,
+  token: string,
+  filename: string,
+): Promise<string> {
   try {
     console.log('Generating image with prompt:', prompt);
 
@@ -57,7 +61,7 @@ export async function generateAndStoreImage(prompt: string, token: string, filen
     const imageBuffer = await imageResponse.arrayBuffer();
 
     const timestamp = Date.now();
-    const key = `${token}/${filename}.png`
+    const key = `${token}/${filename}.png`;
 
     await s3Client.send(
       new PutObjectCommand({
@@ -81,7 +85,7 @@ export async function generateAndStoreImage(prompt: string, token: string, filen
 
 export async function listStoredImages(token?: string): Promise<StoredImage[]> {
   try {
-    const prefix = token ? `${token}/` : '';    
+    const prefix = token ? `${token}/` : '';
     const command = new ListObjectsV2Command({
       Bucket: AWS_S3_BUCKET_NAME!,
       Prefix: prefix,
