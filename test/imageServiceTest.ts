@@ -8,7 +8,7 @@ async function test() {
     console.log('\n1. Testing image generation...');
     const prompt =
       'Create a detailed image of a futuristic cryptocurrency token with glowing blue energy and floating geometric shapes';
-    const generatedImage = await generateAndStoreImage(prompt, 'TEST');
+    const generatedImage = await generateAndStoreImage(prompt, 'test-token', 'test-filename');
     console.log('✓ Image generated successfully!');
     console.log('Generated image URL:', generatedImage);
 
@@ -21,7 +21,7 @@ async function test() {
 
     // Test 3: List images with specific prefix
     console.log('\n3. Testing image listing with prefix...');
-    const testImages = await listStoredImages('TEST');
+    const testImages = await listStoredImages('test-token');
     console.log('✓ Successfully retrieved TEST images!');
     console.log(`Total TEST images found: ${testImages.length}`);
     console.log('TEST images:', testImages);
