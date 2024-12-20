@@ -22,6 +22,46 @@ const server = Bun.serve({
       return new Response('Server is running', { status: 200 });
     }
 
+    // API documentation endpoint
+    if (url.pathname === '/api' || url.pathname === '/api/') {
+      const docs = {
+        authentication: {
+          type: 'Bearer Token',
+          header: 'Authorization: Bearer your-api-key',
+          note: 'All endpoints except /api and /health require authentication',
+        },
+        endpoints: {
+          '/api/images/generate': {
+            method: 'POST',
+            description: 'Generate and store a new image',
+            body: {
+              prompt: 'string - The image generation prompt',
+              identifier: 'string - Identifier for the image',
+            },
+          },
+          '/api/images/list': {
+            method: 'GET',
+            description: 'List stored images',
+            query: {
+              prefix: 'string (optional) - Filter images by prefix',
+            },
+          },
+          '/api/images/delete': {
+            method: 'DELETE',
+            description: 'Delete a stored image',
+            body: {
+              key: 'string - The key of the image to delete',
+            },
+          },
+        },
+      };
+
+      return new Response(JSON.stringify(docs, null, 2), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     // Protected API endpoints
     if (url.pathname.startsWith('/api/')) {
       // Check authentication for all /api/ routes except documentation
@@ -39,7 +79,7 @@ const server = Bun.serve({
       if (url.pathname === '/api/images/generate' && req.method === 'POST') {
         try {
           const body = await req.json();
-          const { prompt, identifier } = body;
+          const { prompt, identifier, filename } = body;
 
           if (!prompt || !identifier) {
             return new Response(JSON.stringify({ error: 'prompt and identifier are required' }), {
@@ -48,7 +88,7 @@ const server = Bun.serve({
             });
           }
 
-          const imageUrl = await generateAndStoreImage(prompt, identifier);
+          const imageUrl = await generateAndStoreImage(prompt, identifier, filename);
           return new Response(JSON.stringify({ success: true, imageUrl }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
@@ -102,46 +142,6 @@ const server = Bun.serve({
             headers: { 'Content-Type': 'application/json' },
           });
         }
-      }
-
-      // API documentation endpoint
-      if (url.pathname === '/api') {
-        const docs = {
-          authentication: {
-            type: 'Bearer Token',
-            header: 'Authorization: Bearer your-api-key',
-            note: 'All endpoints except /api and /health require authentication',
-          },
-          endpoints: {
-            '/api/images/generate': {
-              method: 'POST',
-              description: 'Generate and store a new image',
-              body: {
-                prompt: 'string - The image generation prompt',
-                identifier: 'string - Identifier for the image',
-              },
-            },
-            '/api/images/list': {
-              method: 'GET',
-              description: 'List stored images',
-              query: {
-                prefix: 'string (optional) - Filter images by prefix',
-              },
-            },
-            '/api/images/delete': {
-              method: 'DELETE',
-              description: 'Delete a stored image',
-              body: {
-                key: 'string - The key of the image to delete',
-              },
-            },
-          },
-        };
-
-        return new Response(JSON.stringify(docs, null, 2), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
       }
     }
 
