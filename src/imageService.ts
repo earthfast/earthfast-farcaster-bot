@@ -1,19 +1,17 @@
 import OpenAI from "openai";
 import { S3Client, PutObjectCommand, ListObjectsV2Command, ListObjectsV2CommandOutput, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import dotenv from 'dotenv';
+import { OPENAI_API_KEY, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET_NAME } from './config';
 import fetch from 'node-fetch';
 
-dotenv.config();
-
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
+    apiKey: OPENAI_API_KEY
 });
 
 const s3Client = new S3Client({
-    region: process.env.AWS_REGION,
+    region: AWS_REGION,
     credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
+        accessKeyId: AWS_ACCESS_KEY_ID,
+        secretAccessKey: AWS_SECRET_ACCESS_KEY
     }
 } as const);
 
@@ -54,7 +52,7 @@ export async function generateAndStoreImage(prompt: string, identifier: string):
 
         // Upload to S3
         await s3Client.send(new PutObjectCommand({
-            Bucket: process.env.AWS_S3_BUCKET_NAME!,
+            Bucket: AWS_S3_BUCKET_NAME!,
             Key: filename,
             Body: Buffer.from(imageBuffer),
             ContentType: 'image/png',
@@ -64,7 +62,7 @@ export async function generateAndStoreImage(prompt: string, identifier: string):
             }
         }));
 
-        return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${filename}`;
+        return `https://${AWS_S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/${filename}`;
     } catch (error) {
         console.error("Error in generateAndStoreImage:", error);
         throw error;
@@ -74,7 +72,7 @@ export async function generateAndStoreImage(prompt: string, identifier: string):
 export async function listStoredImages(prefix?: string): Promise<StoredImage[]> {
     try {
         const command = new ListObjectsV2Command({
-            Bucket: process.env.AWS_S3_BUCKET_NAME!,
+            Bucket: AWS_S3_BUCKET_NAME!,
             Prefix: prefix
         });
 
@@ -94,7 +92,7 @@ export async function listStoredImages(prefix?: string): Promise<StoredImage[]> 
             for (const object of objects) {
                 if (object.Key && object.Key.endsWith('.png')) {
                     storedImages.push({
-                        url: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${object.Key}`,
+                        url: `https://${AWS_S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/${object.Key}`,
                         key: object.Key,
                         lastModified: object.LastModified || new Date(),
                         size: object.Size || 0
@@ -116,7 +114,7 @@ export async function listStoredImages(prefix?: string): Promise<StoredImage[]> 
 export async function deleteImage(key: string): Promise<boolean> {
     try {
         await s3Client.send(new DeleteObjectCommand({
-            Bucket: process.env.AWS_S3_BUCKET_NAME!,
+            Bucket: AWS_S3_BUCKET_NAME!,
             Key: key
         }));
         return true;
