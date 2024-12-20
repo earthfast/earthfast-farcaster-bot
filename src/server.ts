@@ -1,6 +1,6 @@
-import { generateAndStoreImage, listStoredImages, deleteImage } from "./imageService";
-import { respondToMessage } from "./bot";
-import { API_SECRET_KEY, SIGNER_UUID } from "./config";
+import { generateAndStoreImage, listStoredImages, deleteImage } from './imageService';
+import { respondToMessage } from './bot';
+import { API_SECRET_KEY, SIGNER_UUID } from './config';
 
 // Authentication middleware
 const authenticateRequest = (req: Request): boolean => {
@@ -26,16 +26,13 @@ const server = Bun.serve({
     if (url.pathname.startsWith('/api/')) {
       // Check authentication for all /api/ routes except documentation
       if (url.pathname !== '/api' && !authenticateRequest(req)) {
-        return new Response(
-          JSON.stringify({ error: 'Unauthorized' }), 
-          { 
-            status: 401, 
-            headers: { 
-              'Content-Type': 'application/json',
-              'WWW-Authenticate': 'Bearer' 
-            } 
-          }
-        );
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+            'WWW-Authenticate': 'Bearer',
+          },
+        });
       }
 
       // Image generation endpoint
@@ -45,22 +42,22 @@ const server = Bun.serve({
           const { prompt, identifier } = body;
 
           if (!prompt || !identifier) {
-            return new Response(
-              JSON.stringify({ error: 'prompt and identifier are required' }), 
-              { status: 400, headers: { 'Content-Type': 'application/json' } }
-            );
+            return new Response(JSON.stringify({ error: 'prompt and identifier are required' }), {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' },
+            });
           }
 
           const imageUrl = await generateAndStoreImage(prompt, identifier);
-          return new Response(
-            JSON.stringify({ success: true, imageUrl }), 
-            { status: 200, headers: { 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ success: true, imageUrl }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
         } catch (error: any) {
-          return new Response(
-            JSON.stringify({ error: error.message }), 
-            { status: 500, headers: { 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          });
         }
       }
 
@@ -69,15 +66,15 @@ const server = Bun.serve({
         try {
           const prefix = url.searchParams.get('prefix');
           const images = await listStoredImages(prefix || undefined);
-          return new Response(
-            JSON.stringify({ success: true, images }), 
-            { status: 200, headers: { 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ success: true, images }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
         } catch (error: any) {
-          return new Response(
-            JSON.stringify({ error: error.message }), 
-            { status: 500, headers: { 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          });
         }
       }
 
@@ -88,22 +85,22 @@ const server = Bun.serve({
           const { key } = body;
 
           if (!key) {
-            return new Response(
-              JSON.stringify({ error: 'key is required' }), 
-              { status: 400, headers: { 'Content-Type': 'application/json' } }
-            );
+            return new Response(JSON.stringify({ error: 'key is required' }), {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' },
+            });
           }
 
           const success = await deleteImage(key);
-          return new Response(
-            JSON.stringify({ success }), 
-            { status: 200, headers: { 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ success }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
         } catch (error: any) {
-          return new Response(
-            JSON.stringify({ error: error.message }), 
-            { status: 500, headers: { 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          });
         }
       }
 
@@ -113,7 +110,7 @@ const server = Bun.serve({
           authentication: {
             type: 'Bearer Token',
             header: 'Authorization: Bearer your-api-key',
-            note: 'All endpoints except /api and /health require authentication'
+            note: 'All endpoints except /api and /health require authentication',
           },
           endpoints: {
             '/api/images/generate': {
@@ -121,33 +118,30 @@ const server = Bun.serve({
               description: 'Generate and store a new image',
               body: {
                 prompt: 'string - The image generation prompt',
-                identifier: 'string - Identifier for the image'
-              }
+                identifier: 'string - Identifier for the image',
+              },
             },
             '/api/images/list': {
               method: 'GET',
               description: 'List stored images',
               query: {
-                prefix: 'string (optional) - Filter images by prefix'
-              }
+                prefix: 'string (optional) - Filter images by prefix',
+              },
             },
             '/api/images/delete': {
               method: 'DELETE',
               description: 'Delete a stored image',
               body: {
-                key: 'string - The key of the image to delete'
-              }
-            }
-          }
+                key: 'string - The key of the image to delete',
+              },
+            },
+          },
         };
-        
-        return new Response(
-          JSON.stringify(docs, null, 2), 
-          { 
-            status: 200, 
-            headers: { 'Content-Type': 'application/json' } 
-          }
-        );
+
+        return new Response(JSON.stringify(docs, null, 2), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
     }
 
@@ -155,12 +149,12 @@ const server = Bun.serve({
     if (url.pathname === '/webhook') {
       try {
         const hookData = await req.json();
-        console.log("Received request", hookData);
-        
+        console.log('Received request', hookData);
+
         if (!SIGNER_UUID) {
-          throw new Error("Make sure you set SIGNER_UUID in your .env file");
+          throw new Error('Make sure you set SIGNER_UUID in your .env file');
         }
-        
+
         Promise.resolve().then(() => respondToMessage(hookData));
         return new Response(`Replying to the cast`, { status: 200 });
       } catch (e: any) {
