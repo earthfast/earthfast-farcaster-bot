@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import neynarClient from './neynarClient';
 import { SIGNER_UUID, NEYNAR_API_KEY, OPENROUTER_API_KEY, PROJECT_BUNDLE_URL } from './config';
 import createSubProject, { parseUserMessage } from './createSubProject';
+import { generateAndStoreImage } from './imageService';
 
 // Validating necessary environment variables or configurations.
 if (!SIGNER_UUID) {
@@ -63,15 +64,16 @@ export async function errorAIResponse(
  * Function to generate a message in response to a user's message.
  * @param hookData - The cast triggering the bot.
  */
-export async function respondToMessage(hookData: any): Promise<{ hash: string; response: string }> {
-  // retrieve parent hash used to cast success or error responses
+export async function respondToMessage(hookData: any): Promise<{ hash: string; response: string, imageUrl?: string }> {
   const parentHash = hookData.data.hash;
-
+  
   try {
     console.log('responding to message');
-
-    // Parse the message to get project details
     const { chainId, tokenTicker, tokenAddress } = parseUserMessage(hookData.data.text);
+
+    const imagePrompt = `Generate a logo for a crypto token with the ticker ${tokenTicker}`;
+    const imageUrl = await generateAndStoreImage(imagePrompt, tokenAddress, imagePrompt);
+    console.log('Generated image URL:', imageUrl);
 
     // Create the sub project
     const receipt = await createSubProject(hookData.data);
@@ -110,11 +112,11 @@ export async function respondToMessage(hookData: any): Promise<{ hash: string; r
     const responseContent =
       completion.choices[0]?.message?.content || 'Project created successfully!';
     console.log('AI generated response', responseContent);
-
+    
     // publish the response to farcaster
     const hash = await publishCast(responseContent, parentHash);
 
-    return { hash, response: responseContent };
+    return { hash, response: responseContent, imageUrl: imageUrl };
   } catch (error: any) {
     console.error('error responding to message', error);
     return errorAIResponse(error.message, parentHash);
