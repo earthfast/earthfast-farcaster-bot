@@ -22,6 +22,16 @@ const authenticateRequest = (req: Request): boolean => {
   return token === FARCASTER_BOT_API_KEY;
 };
 
+interface GenerateImageRequest {
+  prompt: string;
+  identifier: string;
+  filename: string;
+}
+
+interface DeleteImageRequest {
+  key: string;
+}
+
 const server = Bun.serve({
   port: 3000,
   async fetch(req) {
@@ -130,7 +140,7 @@ const server = Bun.serve({
       if (url.pathname === '/api/images/generate' && req.method === 'POST') {
         try {
           const body = await req.json();
-          const { prompt, identifier, filename } = body;
+          const { prompt, identifier, filename } = body as GenerateImageRequest;
 
           if (!prompt || !identifier) {
             return new Response(JSON.stringify({ error: 'prompt and identifier are required' }), {
@@ -159,7 +169,10 @@ const server = Bun.serve({
           const images = await listStoredImages(prefix || undefined);
           return new Response(JSON.stringify({ success: true, images }), {
             status: 200,
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            },
           });
         } catch (error: any) {
           return new Response(JSON.stringify({ error: error.message }), {
@@ -173,7 +186,7 @@ const server = Bun.serve({
       if (url.pathname === '/api/images/delete' && req.method === 'DELETE') {
         try {
           const body = await req.json();
-          const { key } = body;
+          const { key } = body as DeleteImageRequest;
 
           if (!key) {
             return new Response(JSON.stringify({ error: 'key is required' }), {
