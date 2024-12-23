@@ -15,12 +15,13 @@ const corsHeaders = {
 
 // Authentication middleware
 const authenticateRequest = (req: Request): boolean => {
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return false;
-  }
-  const token = authHeader.split(' ')[1];
-  return token === FARCASTER_BOT_API_KEY;
+  // const authHeader = req.headers.get('Authorization');
+  // if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  //   return false;
+  // }
+  // const token = authHeader.split(' ')[1];
+  // return token === FARCASTER_BOT_API_KEY;
+  return true;
 };
 
 interface GenerateImageRequest {
@@ -127,18 +128,18 @@ const server = Bun.serve({
       });
     }
 
-    // // Protected API endpoints
-    // if (url.pathname.startsWith('/api/')) {
-    //   // Check authentication for all /api/ routes except documentation
-    //   if (url.pathname !== '/api' && !authenticateRequest(req)) {
-    //     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-    //       status: 401,
-    //       headers: {
-    //         'Content-Type': 'application/json',
-    //         'WWW-Authenticate': 'Bearer',
-    //       },
-    //     });
-    //   }
+    // Protected API endpoints
+    if (url.pathname.startsWith('/api/')) {
+      // Check authentication for all /api/ routes except documentation
+      if (url.pathname !== '/api' && !authenticateRequest(req)) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+            'WWW-Authenticate': 'Bearer',
+          },
+        });
+    }
 
       // Image generation endpoint
       if (url.pathname === '/api/images/generate' && req.method === 'POST') {
