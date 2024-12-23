@@ -58,8 +58,7 @@ export default async function createSubProject(hookData: any) {
     signer,
   );
 
-  // TODO: check that custody_address is appropriate address to use
-  const caster = hookData.author.custody_address;
+  const caster = hookData.author.username;
   const castHash = hookData.hash;
 
   try {
