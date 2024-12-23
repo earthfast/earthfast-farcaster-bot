@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import projectMultiplexAbi from '../abi/ProjectMultiplex.json';
 import { getMarketData } from './marketDataService';
-import { JSON_RPC_URL } from './config';
+import { JSON_RPC_URL, ChainId } from './config';
 
 interface SubProject {
   chainId: number;
@@ -14,7 +14,7 @@ interface SubProject {
 export class MarketDataPollingService {
   private provider: ethers.JsonRpcProvider;
   private contract: ethers.Contract;
-  private pollingInterval: NodeJS.Timeout | null = null;
+  private pollingInterval: Timer | null = null;
   private readonly POLLING_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
 
   constructor() {
@@ -41,7 +41,7 @@ export class MarketDataPollingService {
           console.log(`Fetching market data for token ${subProject.token} on chain ${subProject.chainId}`);
           
           // Get market data for the token
-          const marketData = await getMarketData(subProject.token, subProject.chainId);
+          const marketData = await getMarketData(subProject.token, subProject.chainId as ChainId);
           
           console.log(`Market data for ${subProject.tokenName}:`, marketData);
         } catch (error) {
@@ -64,7 +64,7 @@ export class MarketDataPollingService {
     // Poll immediately on start
     this.pollMarketData();
 
-    // Set up periodic polling
+    // Set up periodic polling using Bun's timer
     this.pollingInterval = setInterval(() => {
       this.pollMarketData();
     }, this.POLLING_INTERVAL);

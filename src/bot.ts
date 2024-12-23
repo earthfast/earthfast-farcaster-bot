@@ -2,7 +2,7 @@ import { isApiErrorResponse } from '@neynar/nodejs-sdk';
 import OpenAI from 'openai';
 
 import neynarClient from './neynarClient';
-import { SIGNER_UUID, NEYNAR_API_KEY, OPENROUTER_API_KEY, PROJECT_BUNDLE_URL } from './config';
+import { SIGNER_UUID, NEYNAR_API_KEY, OPENROUTER_API_KEY, PROJECT_BUNDLE_URL, ChainId } from './config';
 import createSubProject, { parseUserMessage } from './createSubProject';
 import { generateAndStoreImage } from './imageService';
 import { getMarketData } from './marketDataService';
@@ -120,7 +120,7 @@ export async function respondToMessage(
     const hash = await publishCast(responseContent, parentHash);
 
     // run getMarketData asynchronously on the new subProject
-    Promise.resolve().then(() => getMarketData(tokenAddress, chainId));
+    Promise.resolve().then(() => getMarketData(tokenAddress, parseInt(chainId) as ChainId));
 
     return { hash, response: responseContent, imageUrl: imageUrl };
   } catch (error: any) {

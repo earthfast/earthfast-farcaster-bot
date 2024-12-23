@@ -139,7 +139,7 @@ const server = Bun.serve({
             'WWW-Authenticate': 'Bearer',
           },
         });
-    }
+      }
 
       // Image generation endpoint
       if (url.pathname === '/api/images/generate' && req.method === 'POST') {
