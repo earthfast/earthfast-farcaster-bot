@@ -95,7 +95,7 @@ async function fetchMarketData(address: string, chainId: ChainId): Promise<Token
         url: "https://streaming.bitquery.io/graphql",
         headers: {
             "Content-Type": "application/json",
-            Authorization: process.env.BITQUERY_API_KEY,
+            Authorization: BITQUERY_API_KEY,
         },
         data: queryData,
     }

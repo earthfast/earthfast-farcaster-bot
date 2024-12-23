@@ -3,6 +3,7 @@ import { respondToMessage } from "./bot";
 import { getMarketData } from "./marketDataService";
 import { generateAndStoreImage, listStoredImages, deleteImage } from './imageService';
 import { ChainId, FARCASTER_BOT_API_KEY, SIGNER_UUID } from "./config";
+import { MarketDataPollingService } from './marketDataPollingService';
 
 // TODO: move CORS headers to a middleware handler
 // CORS headers for /market-data endpoint
@@ -31,6 +32,9 @@ interface GenerateImageRequest {
 interface DeleteImageRequest {
   key: string;
 }
+
+// Create polling service instance
+const marketDataPollingService = new MarketDataPollingService();
 
 const server = Bun.serve({
   port: 3000,
@@ -123,18 +127,18 @@ const server = Bun.serve({
       });
     }
 
-    // Protected API endpoints
-    if (url.pathname.startsWith('/api/')) {
-      // Check authentication for all /api/ routes except documentation
-      if (url.pathname !== '/api' && !authenticateRequest(req)) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401,
-          headers: {
-            'Content-Type': 'application/json',
-            'WWW-Authenticate': 'Bearer',
-          },
-        });
-      }
+    // // Protected API endpoints
+    // if (url.pathname.startsWith('/api/')) {
+    //   // Check authentication for all /api/ routes except documentation
+    //   if (url.pathname !== '/api' && !authenticateRequest(req)) {
+    //     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    //       status: 401,
+    //       headers: {
+    //         'Content-Type': 'application/json',
+    //         'WWW-Authenticate': 'Bearer',
+    //       },
+    //     });
+    //   }
 
       // Image generation endpoint
       if (url.pathname === '/api/images/generate' && req.method === 'POST') {
@@ -234,3 +238,19 @@ const server = Bun.serve({
 });
 
 console.log(`Listening on localhost:${server.port}`);
+
+// Start the market data polling service
+marketDataPollingService.start();
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down...');
+  marketDataPollingService.stop();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received. Shutting down...');
+  marketDataPollingService.stop();
+  process.exit(0);
+});
