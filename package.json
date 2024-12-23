@@ -1,7 +1,7 @@
 {
   "name": "earthfast-chatbot",
   "version": "1.0.0",
-  "description": "https://github.com/neynarxyz/farcaster-examples/blob/main/gm-bot/",
+  "description": "Programmaticaly deploy a static website for a token on earthfast",
   "main": "src/server.ts",
   "scripts": {
     "watch": "tsc --watch",

@@ -3,7 +3,7 @@ import { parseUserMessage } from '../src/createSubProject';
 
 describe('parseUserMessage', () => {
   it('should correctly parse a valid message', () => {
-    const message = '@EarthfastBot !create USDC 0x1234567890123456789012345678901234567890 1000';
+    const message = '@EarthfastBot !create 1 USDC 0x1234567890123456789012345678901234567890';
     const result = parseUserMessage(message);
 
     expect(result).to.deep.equal({
@@ -15,7 +15,7 @@ describe('parseUserMessage', () => {
 
   it('should handle extra spaces in the message', () => {
     const message =
-      '@EarthfastBot    !create    USDC    0x1234567890123456789012345678901234567890    1000   ';
+      '@EarthfastBot    !create  1  USDC    0x1234567890123456789012345678901234567890      ';
     const result = parseUserMessage(message);
 
     expect(result).to.deep.equal({
@@ -43,7 +43,7 @@ describe('parseUserMessage', () => {
 
   it('should handle message with extra text before !create', () => {
     const message =
-      'Hello world @EarthfastBot !create USDC 0x1234567890123456789012345678901234567890 1000';
+      'Hello world @EarthfastBot !create 1 USDC 0x1234567890123456789012345678901234567890';
     const result = parseUserMessage(message);
 
     expect(result).to.deep.equal({
@@ -55,7 +55,7 @@ describe('parseUserMessage', () => {
 
   it('should handle message with extra text after parameters', () => {
     const message =
-      '@EarthfastBot !create USDC 0x1234567890123456789012345678901234567890 1000 please and thank you';
+      '@EarthfastBot !create 1 USDC 0x1234567890123456789012345678901234567890 please and thank you';
     const result = parseUserMessage(message);
 
     expect(result).to.deep.equal({

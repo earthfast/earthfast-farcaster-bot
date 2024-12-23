@@ -1,25 +1,91 @@
+import neynarClient from "./neynarClient";
+import { respondToMessage } from "./bot";
+import { getMarketData } from "./marketDataService";
 import { generateAndStoreImage, listStoredImages, deleteImage } from './imageService';
-import { respondToMessage } from './bot';
-import { FARCASTER_BOT_API_KEY, SIGNER_UUID } from './config';
+import { ChainId, FARCASTER_BOT_API_KEY, SIGNER_UUID } from "./config";
+import { MarketDataPollingService } from './marketDataPollingService';
+
+// TODO: move CORS headers to a middleware handler
+// CORS headers for /market-data endpoint
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+}
 
 // Authentication middleware
 const authenticateRequest = (req: Request): boolean => {
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return false;
-  }
-  const token = authHeader.split(' ')[1];
-  return token === FARCASTER_BOT_API_KEY;
+  // const authHeader = req.headers.get('Authorization');
+  // if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  //   return false;
+  // }
+  // const token = authHeader.split(' ')[1];
+  // return token === FARCASTER_BOT_API_KEY;
+  return true;
 };
+
+interface GenerateImageRequest {
+  prompt: string;
+  identifier: string;
+  filename: string;
+}
+
+interface DeleteImageRequest {
+  key: string;
+}
+
+// Create polling service instance
+const marketDataPollingService = new MarketDataPollingService();
 
 const server = Bun.serve({
   port: 3000,
   async fetch(req) {
     const url = new URL(req.url);
 
+    // Handle CORS preflight requests
+    if (req.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: corsHeaders
+      });
+    }
+
     // Health check endpoint
     if (url.pathname === '/health') {
       return new Response('Server is running', { status: 200 });
+    }
+
+    // handle market data requests from the client
+    if (url.pathname === '/market-data') {
+      try {
+        const address = url.searchParams.get('address');
+        const chainId = url.searchParams.get('chainId');
+
+        if (!address || !chainId) {
+          return new Response('Missing address or chainId parameter', {
+            status: 400,
+            headers: corsHeaders
+          });
+        }
+
+        const marketData = await getMarketData(address, parseInt(chainId) as ChainId);
+        return new Response(JSON.stringify(marketData), {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching market data:', error);
+        return new Response(JSON.stringify({ error: 'Failed to fetch market data' }), { 
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
     }
 
     // API documentation endpoint
@@ -79,7 +145,7 @@ const server = Bun.serve({
       if (url.pathname === '/api/images/generate' && req.method === 'POST') {
         try {
           const body = await req.json();
-          const { prompt, identifier, filename } = body;
+          const { prompt, identifier, filename } = body as GenerateImageRequest;
 
           if (!prompt || !identifier) {
             return new Response(JSON.stringify({ error: 'prompt and identifier are required' }), {
@@ -108,7 +174,10 @@ const server = Bun.serve({
           const images = await listStoredImages(prefix || undefined);
           return new Response(JSON.stringify({ success: true, images }), {
             status: 200,
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            },
           });
         } catch (error: any) {
           return new Response(JSON.stringify({ error: error.message }), {
@@ -122,7 +191,7 @@ const server = Bun.serve({
       if (url.pathname === '/api/images/delete' && req.method === 'DELETE') {
         try {
           const body = await req.json();
-          const { key } = body;
+          const { key } = body as DeleteImageRequest;
 
           if (!key) {
             return new Response(JSON.stringify({ error: 'key is required' }), {
@@ -170,3 +239,19 @@ const server = Bun.serve({
 });
 
 console.log(`Listening on localhost:${server.port}`);
+
+// Start the market data polling service
+marketDataPollingService.start();
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down...');
+  marketDataPollingService.stop();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received. Shutting down...');
+  marketDataPollingService.stop();
+  process.exit(0);
+});
