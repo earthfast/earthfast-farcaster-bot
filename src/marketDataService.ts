@@ -47,6 +47,7 @@ export async function getMarketData(address: string, chainId: ChainId): Promise<
 }
 
 // Separate function for the actual API call
+// return empty marketData in the event of a failure to prevent overloading query credits on failed calls
 async function fetchMarketData(address: string, chainId: ChainId): Promise<TokenMarketMetadata> {
     // query variables
     const today = new Date().toISOString().split('T')[0];
@@ -100,6 +101,18 @@ async function fetchMarketData(address: string, chainId: ChainId): Promise<Token
         data: queryData,
     }
   
+    // Initialize with default values
+    const marketData: TokenMarketMetadata = {
+        price: 0,
+        holders: "0",
+        totalTradeVolume: "0",
+        totalTrades: "0",
+        totalBuyVolume: "0",
+        totalSellVolume: "0",
+        totalBuys: "0",
+        totalSells: "0",
+    };
+
     try {
         const response = await axios.request(config);
         const evmData = response.data?.data?.EVM;
@@ -107,18 +120,6 @@ async function fetchMarketData(address: string, chainId: ChainId): Promise<Token
         if (!evmData) {
             throw new Error("No EVM data returned from Bitquery");
         }
-
-        // Initialize with default values
-        const marketData: TokenMarketMetadata = {
-            price: 0,
-            holders: "0",
-            totalTradeVolume: "0",
-            totalTrades: "0",
-            totalBuyVolume: "0",
-            totalSellVolume: "0",
-            totalBuys: "0",
-            totalSells: "0",
-        };
 
         // Safely extract holders data
         try {
@@ -149,7 +150,8 @@ async function fetchMarketData(address: string, chainId: ChainId): Promise<Token
 
     } catch (error) {
         console.error("Error fetching market data from Bitquery:", error);
-        throw error;
+        // throw error;
+        return marketData;
     }
 }
 
