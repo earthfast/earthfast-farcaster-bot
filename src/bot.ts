@@ -120,7 +120,9 @@ export async function respondToMessage(
     const hash = await publishCast(responseContent, parentHash);
 
     // run getMarketData asynchronously on the new subProject
-    Promise.resolve().then(() => getMarketData(tokenAddress, parseInt(chainId) as ChainId));
+    Promise.resolve()
+      .then(() => getMarketData(tokenAddress, parseInt(chainId) as ChainId))
+      .catch((error) => console.error('error getting market data for new subproject', error));
 
     return { hash, response: responseContent, imageUrl: imageUrl };
   } catch (error: any) {
