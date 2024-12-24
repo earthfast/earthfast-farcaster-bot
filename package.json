@@ -7,7 +7,6 @@
     "watch": "tsc --watch",
     "build": "rm -rf dist && tsc",
     "start": "npm run build && bun run src/server.ts",
-    "generate-bot-signer": "ts-node src/generateSignerForBot.ts",
     "test": "mocha -r ts-node/register 'test/**/*.ts'",
     "test:watch": "mocha -r ts-node/register 'test/**/*.ts' --watch",
     "lint": "eslint 'src/**/*.{js,ts}' 'test/**/*.{js,ts}'",
