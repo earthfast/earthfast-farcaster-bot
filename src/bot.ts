@@ -5,7 +5,7 @@ import createSubProject, { parseUserMessage } from './createSubProject';
 import { generateAndStoreImage } from './services/imageService';
 import { getMarketData } from './services/marketDataService';
 import character from './character.json';
-import { getTokenMetadataGeckoTerminal } from './services/metadataService';
+import { getTokenMetadata } from './services/metadataService';
 import { publishCast } from './neynarClient';
 
 // Validating necessary environment variables or configurations.
@@ -94,7 +94,7 @@ export async function respondToMessage(
     const chainIdInt = parseInt(chainId) as ChainId;
 
     // retrieve the token metadata
-    const tokenMetadata = await getTokenMetadataGeckoTerminal(tokenAddress, chainIdInt);
+    const tokenMetadata = await getTokenMetadata(tokenAddress, chainIdInt);
 
     // generate a custom image to use for the sub-project site
     const imagePrompt = `

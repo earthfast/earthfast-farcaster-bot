@@ -4,7 +4,7 @@ import { ChainId, FARCASTER_BOT_API_KEY, SIGNER_UUID } from "./config";
 import { getMarketData } from "./services/marketDataService";
 import { generateAndStoreImage, listStoredImages, deleteImage } from './services/imageService';
 import { MarketDataPollingService } from './services/marketDataPollingService';
-import { getTokenMetadataGeckoTerminal } from './services/metadataService';
+import { getTokenMetadata } from './services/metadataService';
 
 // TODO: move CORS headers to a middleware handler
 // CORS headers for /market-data endpoint
@@ -103,7 +103,7 @@ const server = Bun.serve({
           });
         }
 
-        const metadata = await getTokenMetadataGeckoTerminal(tokenAddress, parseInt(chainId) as ChainId);
+        const metadata = await getTokenMetadata(tokenAddress, parseInt(chainId) as ChainId);
         return new Response(JSON.stringify(metadata), {
         status: 200,
         headers: {
