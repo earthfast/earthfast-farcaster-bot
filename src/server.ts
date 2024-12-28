@@ -4,7 +4,7 @@ import { getMarketData } from "./marketDataService";
 import { generateAndStoreImage, listStoredImages, deleteImage } from './imageService';
 import { ChainId, FARCASTER_BOT_API_KEY, SIGNER_UUID } from "./config";
 import { MarketDataPollingService } from './marketDataPollingService';
-
+import { getTokenMetadataGeckoTerminal } from './metadataService';
 // TODO: move CORS headers to a middleware handler
 // CORS headers for /market-data endpoint
 const corsHeaders = {
@@ -79,6 +79,40 @@ const server = Bun.serve({
       } catch (error) {
         console.error('Error fetching market data:', error);
         return new Response(JSON.stringify({ error: 'Failed to fetch market data' }), { 
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    }
+
+    // handle token metadata requests from the client
+    if (url.pathname === '/token-metadata') {
+      try {
+        console.log('Fetching token metadata');
+        const tokenAddress = url.searchParams.get('tokenAddress');
+        const chainId = url.searchParams.get('chainId');
+
+        if (!tokenAddress || !chainId) {
+          return new Response('Missing tokenAddress or chainId parameter', {
+            status: 400,
+            headers: corsHeaders
+          });
+        }
+
+        const metadata = await getTokenMetadataGeckoTerminal(tokenAddress, parseInt(chainId) as ChainId);
+        return new Response(JSON.stringify(metadata), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+        });
+      } catch (error) {
+        console.error('Error fetching token metadata:', error);
+        return new Response(JSON.stringify({ error: 'Failed to fetch token metadata' }), { 
           status: 500,
           headers: {
             ...corsHeaders,

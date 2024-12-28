@@ -2,10 +2,12 @@ import { isApiErrorResponse } from '@neynar/nodejs-sdk';
 import OpenAI from 'openai';
 
 import neynarClient from './neynarClient';
-import { SIGNER_UUID, NEYNAR_API_KEY, OPENROUTER_API_KEY, PROJECT_BUNDLE_URL, ChainId } from './config';
+import { SIGNER_UUID, NEYNAR_API_KEY, OPENROUTER_API_KEY, PROJECT_BUNDLE_URL, ChainId, CHAIN_CONFIG } from './config';
 import createSubProject, { parseUserMessage } from './createSubProject';
 import { generateAndStoreImage } from './imageService';
 import { getMarketData } from './marketDataService';
+import character from './character.json';
+import { getTokenMetadataGeckoTerminal } from './metadataService';
 
 // Validating necessary environment variables or configurations.
 if (!SIGNER_UUID) {
@@ -29,19 +31,48 @@ const openai = new OpenAI({
   },
 });
 
+// TODO: split prompt context between bot responses and image generation
+// TODO: add some form of bot memory
+// TODO: integrate this output prompt into other bot responses
+/**
+ * Function to generate a contextual prompt for a user's message.
+ * @param userMessage - The user's message.
+ * @param requiredResponseInformation - The required information to include in the response.
+ */
+export async function getContextualPrompt(
+  userMessage: string,
+  requiredResponseInformation: string
+): Promise<string> {
+  // combine the token description with the user message and the character description to generate a prompt
+  const prompt = `
+    Generate a response (max 280 characters) for a user taking into account the following information:
+    - The user message is: ${userMessage}
+    - You are a helpful bot named ${character.name}
+    - Your bio is: ${character.bio}
+    - Your lore is: ${character.lore}
+    - Your personality is: ${character.personality}
+    - The response must include the following information: ${requiredResponseInformation}
+  `;
+  return prompt;
+}
+
 /**
  * Function to generate an error response using OpenRouter.
- * @param error - The error message.
  * @param parentHash - The hash of the parent cast.
+ * @param hookData - The cast triggering the bot.
+ * @param requiredPromptInfo - The required information to include in the response.
  */
 export async function errorAIResponse(
-  error: string,
   parentHash: string,
+  hookData: any,
+  requiredPromptInfo: string,
 ): Promise<{ hash: string; response: string }> {
-  const errorPrompt = `
-        Generate a friendly and concise response (max 280 characters) for a user who tried to create a sub-project but encountered an error:
-        - Error: ${error}
-    `;
+  // const errorPrompt = `
+  //       Generate a friendly and concise response (max 280 characters) for a user who tried to create a sub-project but encountered an error:
+  //       - Error: ${error}
+  //   `;
+
+  const errorPrompt = await getContextualPrompt(hookData.data.text, requiredPromptInfo)
 
   const completion = await openai.chat.completions.create({
     model: 'openai/gpt-4o-mini',
@@ -60,6 +91,7 @@ export async function errorAIResponse(
   return { hash, response: responseContent };
 }
 
+// TODO: need to split this based upon whether the user is trying to create a sub-project or not
 // TODO: update the hookData type - it's a PostCastResponseCast but the type is not exported
 /**
  * Function to generate a message in response to a user's message.
@@ -73,9 +105,20 @@ export async function respondToMessage(
   try {
     console.log('responding to message');
     const { chainId, tokenTicker, tokenAddress } = parseUserMessage(hookData.data.text);
+    const chainIdInt = parseInt(chainId) as ChainId;
 
-    const imagePrompt = `Generate a logo for a crypto token with the ticker ${tokenTicker}`;
-    const imageUrl = await generateAndStoreImage(imagePrompt, tokenAddress, imagePrompt);
+    // retrieve the token metadata
+    const tokenMetadata = await getTokenMetadataGeckoTerminal(tokenAddress, chainIdInt);
+
+    // generate a custom image to use for the sub-project site
+    const imagePrompt = `
+      Generate a cover image for a crypto token with the ticker ${tokenTicker}
+      The token is on the ${CHAIN_CONFIG[chainIdInt].name} chain.
+      The token description is: ${tokenMetadata?.description}.
+      The user asked: ${hookData.data.text}
+    `;
+    const fileName = `${tokenTicker}-${tokenAddress}-${chainId}`;
+    const imageUrl = await generateAndStoreImage(imagePrompt, tokenAddress, fileName);
     console.log('Generated image URL:', imageUrl);
 
     // Create the sub project
@@ -87,21 +130,32 @@ export async function respondToMessage(
     );
     const subProjectId = subProjectCreatedEvent.args[1];
 
-    // Generate a contextual response using OpenRouter
-    const prompt = `
-            Generate a friendly and concise response (max 280 characters) for a user who just created a sub-project with these details:
-            - Token Name: ${tokenTicker}
-            - Token Address: ${tokenAddress}
-            - Chain ID: ${chainId}
+    // // Generate a contextual response using OpenRouter
+    // const prompt = `
+    //         Generate a friendly and concise response (max 280 characters) for a user who just created a sub-project with these details:
+    //         - Token Name: ${tokenTicker}
+    //         - Token Address: ${tokenAddress}
+    //         - Chain ID: ${chainId}
 
-            The response should:
-            1. Confirm the project creation
-            2. Mention the token and amount
-            3. Be encouraging and positive
-            4. Use no more than 1-2 emojis
-            5. Provide a link to the sub project site: ${PROJECT_BUNDLE_URL}${subProjectId}
-        `;
+    //         The response should:
+    //         1. Confirm the project creation
+    //         2. Mention the token and amount
+    //         3. Be encouraging and positive
+    //         4. Use no more than 1-2 emojis
+    //         5. Provide a link to the sub project site: ${PROJECT_BUNDLE_URL}${subProjectId}
+    //     `;
 
+    // generate the required prompt for responding to a subproject creation
+    const requiredPromptInfo = `
+      The response must:
+      1. Confirm the project creation
+      2. Mention the token ${tokenTicker} with address ${tokenAddress} on the ${CHAIN_CONFIG[chainIdInt].name} chain.
+      3. Take into account the token description: ${tokenMetadata?.description}
+      4. Provide a link to the sub project site: ${PROJECT_BUNDLE_URL}${subProjectId}
+    `
+    const prompt = await getContextualPrompt(hookData.data.text, requiredPromptInfo)
+
+    // generate the response using the prompt
     const completion = await openai.chat.completions.create({
       model: 'openai/gpt-4o-mini',
       messages: [
@@ -121,16 +175,21 @@ export async function respondToMessage(
 
     // run getMarketData asynchronously on the new subProject
     Promise.resolve()
-      .then(() => getMarketData(tokenAddress, parseInt(chainId) as ChainId))
+      .then(() => getMarketData(tokenAddress, chainIdInt))
       .catch((error) => console.error('error getting market data for new subproject', error));
 
     return { hash, response: responseContent, imageUrl: imageUrl };
   } catch (error: any) {
     console.error('error responding to message', error);
-    return errorAIResponse(error.message, parentHash);
+    const requiredPromptInfo = `
+      The response must inform the user that the sub-project creation failed and pass on the error message:
+      - Error: ${error}
+    `
+    return errorAIResponse(parentHash, hookData, requiredPromptInfo);
   }
 }
 
+// TODO: move this to neynarClient
 /**
  * Function to publish a message (cast) using neynarClient.
  * @param msg - The message to be published.
