@@ -1,23 +1,14 @@
-import { isApiErrorResponse } from '@neynar/nodejs-sdk';
 import OpenAI from 'openai';
 
-import neynarClient from './neynarClient';
-import { SIGNER_UUID, NEYNAR_API_KEY, OPENROUTER_API_KEY, PROJECT_BUNDLE_URL, ChainId, CHAIN_CONFIG } from './config';
+import { OPENROUTER_API_KEY, PROJECT_BUNDLE_URL, ChainId, CHAIN_CONFIG } from './config';
 import createSubProject, { parseUserMessage } from './createSubProject';
-import { generateAndStoreImage } from './imageService';
-import { getMarketData } from './marketDataService';
+import { generateAndStoreImage } from './services/imageService';
+import { getMarketData } from './services/marketDataService';
 import character from './character.json';
-import { getTokenMetadataGeckoTerminal } from './metadataService';
+import { getTokenMetadataGeckoTerminal } from './services/metadataService';
+import { publishCast } from './neynarClient';
 
 // Validating necessary environment variables or configurations.
-if (!SIGNER_UUID) {
-  throw new Error('SIGNER_UUID is not defined');
-}
-
-if (!NEYNAR_API_KEY) {
-  throw new Error('NEYNAR_API_KEY is not defined');
-}
-
 if (!OPENROUTER_API_KEY) {
   throw new Error('OPENROUTER_API_KEY is not defined');
 }
@@ -67,11 +58,6 @@ export async function errorAIResponse(
   hookData: any,
   requiredPromptInfo: string,
 ): Promise<{ hash: string; response: string }> {
-  // const errorPrompt = `
-  //       Generate a friendly and concise response (max 280 characters) for a user who tried to create a sub-project but encountered an error:
-  //       - Error: ${error}
-  //   `;
-
   const errorPrompt = await getContextualPrompt(hookData.data.text, requiredPromptInfo)
 
   const completion = await openai.chat.completions.create({
@@ -130,21 +116,6 @@ export async function respondToMessage(
     );
     const subProjectId = subProjectCreatedEvent.args[1];
 
-    // // Generate a contextual response using OpenRouter
-    // const prompt = `
-    //         Generate a friendly and concise response (max 280 characters) for a user who just created a sub-project with these details:
-    //         - Token Name: ${tokenTicker}
-    //         - Token Address: ${tokenAddress}
-    //         - Chain ID: ${chainId}
-
-    //         The response should:
-    //         1. Confirm the project creation
-    //         2. Mention the token and amount
-    //         3. Be encouraging and positive
-    //         4. Use no more than 1-2 emojis
-    //         5. Provide a link to the sub project site: ${PROJECT_BUNDLE_URL}${subProjectId}
-    //     `;
-
     // generate the required prompt for responding to a subproject creation
     const requiredPromptInfo = `
       The response must:
@@ -188,29 +159,3 @@ export async function respondToMessage(
     return errorAIResponse(parentHash, hookData, requiredPromptInfo);
   }
 }
-
-// TODO: move this to neynarClient
-/**
- * Function to publish a message (cast) using neynarClient.
- * @param msg - The message to be published.
- * @param parentCastHash - The hash of the parent cast.
- */
-const publishCast = async (msg: string, parentCastHash: string): Promise<string> => {
-  try {
-    console.log('publishing cast');
-    // Use the neynarClient to publish the cast.
-    const postCastResponse = await neynarClient.publishCast({
-      signerUuid: SIGNER_UUID,
-      text: msg,
-      parent: parentCastHash,
-    });
-    console.log('Cast published successfully');
-    return postCastResponse.cast.hash;
-  } catch (err) {
-    // Error handling, checking if it's an API response error.
-    if (isApiErrorResponse(err)) {
-      console.log(err.response.data);
-    } else console.log(err);
-    return '';
-  }
-};

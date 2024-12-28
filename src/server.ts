@@ -1,10 +1,11 @@
 import neynarClient from "./neynarClient";
 import { respondToMessage } from "./bot";
-import { getMarketData } from "./marketDataService";
-import { generateAndStoreImage, listStoredImages, deleteImage } from './imageService';
 import { ChainId, FARCASTER_BOT_API_KEY, SIGNER_UUID } from "./config";
-import { MarketDataPollingService } from './marketDataPollingService';
-import { getTokenMetadataGeckoTerminal } from './metadataService';
+import { getMarketData } from "./services/marketDataService";
+import { generateAndStoreImage, listStoredImages, deleteImage } from './services/imageService';
+import { MarketDataPollingService } from './services/marketDataPollingService';
+import { getTokenMetadataGeckoTerminal } from './services/metadataService';
+
 // TODO: move CORS headers to a middleware handler
 // CORS headers for /market-data endpoint
 const corsHeaders = {

@@ -1,5 +1,5 @@
 import axios from "axios";
-import { BITQUERY_API_KEY, CHAIN_CONFIG, ChainId } from "./config";
+import { BITQUERY_API_KEY, CHAIN_CONFIG, ChainId } from "../config";
 
 export interface TokenMarketMetadata {
     price: number;

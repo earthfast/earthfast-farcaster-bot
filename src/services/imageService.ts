@@ -13,7 +13,7 @@ import {
   AWS_ACCESS_KEY_ID,
   AWS_SECRET_ACCESS_KEY,
   AWS_S3_BUCKET_NAME,
-} from './config';
+} from '../config';
 
 const openai = new OpenAI({
   apiKey: OPENAI_API_KEY,

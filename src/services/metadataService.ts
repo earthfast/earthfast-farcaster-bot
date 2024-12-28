@@ -1,4 +1,4 @@
-import { ChainId, CHAIN_CONFIG } from "./config";
+import { ChainId, CHAIN_CONFIG } from "../config";
 
 export interface TokenMetadataGeckoTerminal {
     description: string;
