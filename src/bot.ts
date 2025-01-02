@@ -7,6 +7,7 @@ import { getMarketData } from './services/marketDataService';
 import character from './character.json';
 import { getTokenMetadata } from './services/metadataService';
 import { publishCast } from './neynarClient';
+import { getContextFromRelatedThreads } from './services/messageHistoryService';
 
 // Validating necessary environment variables or configurations.
 if (!OPENROUTER_API_KEY) {
@@ -24,17 +25,21 @@ const openai = new OpenAI({
 
 // TODO: split prompt context between bot responses and image generation
 // TODO: add some form of bot memory
-// TODO: integrate this output prompt into other bot responses
 /**
  * Function to generate a contextual prompt for a user's message.
  * @param userMessage - The user's message.
  * @param requiredResponseInformation - The required information to include in the response.
+ * @param castHash - The cast hash associated with the message.
  */
 export async function getContextualPrompt(
   userMessage: string,
-  requiredResponseInformation: string
+  requiredResponseInformation: string,
+  castHash: string
 ): Promise<string> {
-  // combine the token description with the user message and the character description to generate a prompt
+  // Get context from related threads
+  const threadContext = await getContextFromRelatedThreads(castHash);
+
+  // generate a contextual prompt for the bot
   const prompt = `
     Generate a response (max 280 characters) for a user taking into account the following information:
     - The user message is: ${userMessage}
@@ -43,6 +48,7 @@ export async function getContextualPrompt(
     - Your lore is: ${character.lore}
     - Your personality is: ${character.personality}
     - The response must include the following information: ${requiredResponseInformation}
+    ${threadContext ? `\n${threadContext}` : ''}
   `;
   return prompt;
 }
@@ -58,7 +64,7 @@ export async function errorAIResponse(
   hookData: any,
   requiredPromptInfo: string,
 ): Promise<{ hash: string; response: string }> {
-  const errorPrompt = await getContextualPrompt(hookData.data.text, requiredPromptInfo)
+  const errorPrompt = await getContextualPrompt(hookData.data.text, requiredPromptInfo, hookData.data.hash)
 
   const completion = await openai.chat.completions.create({
     model: 'openai/gpt-4o-mini',
@@ -124,7 +130,7 @@ export async function respondToMessage(
       3. Take into account the token description: ${tokenMetadata?.description}
       4. Provide a link to the sub project site: ${PROJECT_BUNDLE_URL}${subProjectId}
     `
-    const prompt = await getContextualPrompt(hookData.data.text, requiredPromptInfo)
+    const prompt = await getContextualPrompt(hookData.data.text, requiredPromptInfo, hookData.data.hash)
 
     // generate the response using the prompt
     const completion = await openai.chat.completions.create({

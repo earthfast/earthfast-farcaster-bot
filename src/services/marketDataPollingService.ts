@@ -11,7 +11,6 @@ interface SubProject {
   castHash: string;
 }
 
-// TODO: make this polling service more generic and reusable for other types of data (especially metadata)
 export class MarketDataPollingService {
   private provider: ethers.JsonRpcProvider;
   private contract: ethers.Contract;
