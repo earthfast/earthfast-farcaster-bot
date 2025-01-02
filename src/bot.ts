@@ -78,7 +78,7 @@ export async function errorAIResponse(
 
   const responseContent =
     completion.choices[0]?.message?.content ||
-    'Sorry, I encountered an error while creating your sub-project. Please try again later 🔧';
+    'Sorry, I encountered an error while creating your site. Please try again later 🔧';
   const hash = await publishCast(responseContent, parentHash);
   return { hash, response: responseContent };
 }
@@ -159,7 +159,7 @@ export async function respondToMessage(
   } catch (error: any) {
     console.error('error responding to message', error);
     const requiredPromptInfo = `
-      The response must inform the user that the sub-project creation failed and pass on the error message:
+      The response must inform the user that the website creation failed and pass on the error message:
       - Error: ${error}
     `
     return errorAIResponse(parentHash, hookData, requiredPromptInfo);

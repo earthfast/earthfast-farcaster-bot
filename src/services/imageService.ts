@@ -35,6 +35,17 @@ export interface StoredImage {
   prompt?: string;
 }
 
+function sanitizeMetadata(value: string): string {
+  // Remove newlines, tabs and convert to single line
+  const singleLine = value.replace(/[\n\r\t]/g, ' ').trim();
+
+  // Remove all special characters and emojis, keep only alphanumeric and basic punctuation
+  const cleaned = singleLine.replace(/[^a-zA-Z0-9\s.,!?-]/g, '');
+
+  // Ensure the string isn't too long for S3 metadata
+  return cleaned.slice(0, 512);
+}
+
 export async function generateAndStoreImage(
   prompt: string,
   token: string,
@@ -63,6 +74,10 @@ export async function generateAndStoreImage(
     const timestamp = Date.now();
     const key = `${token}/${filename}.png`;
 
+    // Log the sanitized metadata for debugging
+    const sanitizedPrompt = sanitizeMetadata(prompt);
+    console.log('Sanitized metadata prompt:', sanitizedPrompt);
+
     await s3Client.send(
       new PutObjectCommand({
         Bucket: AWS_S3_BUCKET_NAME!,
@@ -70,7 +85,7 @@ export async function generateAndStoreImage(
         Body: Buffer.from(imageBuffer),
         ContentType: 'image/png',
         Metadata: {
-          prompt: prompt,
+          prompt: sanitizedPrompt,
           timestamp: timestamp.toString(),
         },
       }),
