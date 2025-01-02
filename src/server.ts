@@ -93,7 +93,7 @@ const server = Bun.serve({
     if (url.pathname === '/token-metadata') {
       try {
         console.log('Fetching token metadata');
-        const tokenAddress = url.searchParams.get('tokenAddress');
+        const tokenAddress = url.searchParams.get('address');
         const chainId = url.searchParams.get('chainId');
 
         if (!tokenAddress || !chainId) {
