@@ -58,7 +58,7 @@ export async function generateAndStoreImage(
       model: 'dall-e-3',
       prompt: prompt,
       n: 1,
-      size: '1024x1792',
+      size: '1792x1024',
       quality: 'standard',
     });
 
