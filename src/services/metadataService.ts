@@ -15,7 +15,7 @@ interface TokenMetadataResponse {
             description: string;
             image_url: string;
             websites: string[];
-            discord_handle: string;
+            discord_url: string;
             telegram_handle: string;
             twitter_handle: string;
         }
@@ -79,7 +79,7 @@ async function fetchTokenMetadata(address: string, chainId: ChainId): Promise<To
             description: attributes.description,
             imageUrl: attributes.image_url,
             websites: attributes.websites,
-            discord: attributes.discord_handle,
+            discord: attributes.discord_url,
             telegram: attributes.telegram_handle,
             twitter: attributes.twitter_handle,
         };
