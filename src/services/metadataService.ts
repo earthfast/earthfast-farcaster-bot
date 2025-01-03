@@ -15,9 +15,9 @@ interface TokenMetadataResponse {
             description: string;
             image_url: string;
             websites: string[];
-            discord: string;
-            telegram: string;
-            twitter: string;
+            discord_handle: string;
+            telegram_handle: string;
+            twitter_handle: string;
         }
     }
 }
@@ -79,9 +79,9 @@ async function fetchTokenMetadata(address: string, chainId: ChainId): Promise<To
             description: attributes.description,
             imageUrl: attributes.image_url,
             websites: attributes.websites,
-            discord: attributes.discord,
-            telegram: attributes.telegram,
-            twitter: attributes.twitter,
+            discord: attributes.discord_handle,
+            telegram: attributes.telegram_handle,
+            twitter: attributes.twitter_handle,
         };
     } catch (error) {
         console.error("Error fetching token metadata:", error);
