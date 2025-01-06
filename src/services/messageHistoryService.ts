@@ -40,17 +40,27 @@ const threadHistory: Record<string, ThreadEntry> = {};
 
 // Get the root hash of a thread by traversing parent hashes
 function getRootHash(message: BotMessage): string {
-    const entry = message.parentHash ? threadHistory[message.parentHash] : null;
-    if (!entry) {
-        return message.castHash;
+    let currentHash = message.castHash;
+    let currentMessage = message;
+    
+    while (currentMessage.parentHash) {
+        // Look for messages with this parent hash
+        for (const [hash, entry] of Object.entries(threadHistory)) {
+            const parentMessage = entry.messages.find(m => m.castHash === currentMessage.parentHash);
+            if (parentMessage) {
+                currentHash = parentMessage.castHash;
+                currentMessage = parentMessage;
+                break;
+            }
+        }
+
+        // If we didn't find a parent message, break to avoid infinite loop
+        if (currentMessage.castHash === currentHash) {
+            break;
+        }
     }
     
-    // Find earliest message in thread
-    const earliestMessage = entry.messages.reduce((earliest, current) => 
-        current.timestamp < earliest.timestamp ? current : earliest
-    );
-    
-    return earliestMessage.castHash;
+    return currentHash;
 }
 
 export function addMessage(message: BotMessage): void {
@@ -87,12 +97,16 @@ export function getThread(rootHash: string): BotMessage[] {
 }
 
 export function getRelatedThreads(castHash: string): string[] {
-    // Find threads that mention this cast hash in their messages
+    // Find threads that are related to this cast hash
     return Object.entries(threadHistory)
         .filter(([rootHash, entry]) => 
+            // Check if any message in the thread:
             entry.messages.some(msg => 
-                msg.content.includes(castHash) || 
-                msg.parentHash === castHash
+                msg.castHash === castHash || // Is this cast
+                msg.parentHash === castHash || // Has this cast as parent
+                msg.content.includes(castHash) || // Mentions this cast
+                // Is in the same thread hierarchy
+                msg.parentHash && getThread(msg.parentHash).some(m => m.castHash === castHash)
             )
         )
         .map(([rootHash]) => rootHash);
@@ -148,16 +162,19 @@ export async function getThreadSummary(rootHash: string): Promise<ThreadSummary 
 
 export async function getContextFromRelatedThreads(castHash: string, maxThreads = 3): Promise<string> {
     const relatedThreads = getRelatedThreads(castHash);
+    console.log('Found related threads:', relatedThreads);
+
     const summaries: string[] = [];
 
     for (const threadHash of relatedThreads.slice(0, maxThreads)) {
         const summary = await getThreadSummary(threadHash);
+        console.log(`Summary for thread ${threadHash}:`, summary);
         if (summary) {
             summaries.push(`Thread ${threadHash.slice(0, 8)}: ${summary.summary}`);
         }
     }
 
-    console.log('thread summaries', summaries);
+    console.log('Final thread summaries:', summaries);
 
     return summaries.length > 0 
         ? `Related discussions:\n${summaries.join('\n')}`

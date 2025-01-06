@@ -8,6 +8,7 @@ import character from './character.json';
 import { getTokenMetadata } from './services/metadataService';
 import { publishCast } from './neynarClient';
 import { getContextFromRelatedThreads } from './services/messageHistoryService';
+import { addMessage } from './services/messageHistoryService';
 
 // Validating necessary environment variables or configurations.
 if (!OPENROUTER_API_KEY) {
@@ -39,7 +40,7 @@ export async function getContextualPrompt(
 
   // generate a contextual prompt for the bot
   const prompt = `
-    Generate a response (max 280 characters) for a user taking into account the following information:
+    Generate a response (max 320 characters) for a user taking into account the following information:
     - The user message is: ${userMessage}
     - You are a helpful bot named ${character.name}
     - Your bio is: ${character.bio}
@@ -92,6 +93,15 @@ export async function respondToMessage(
 ): Promise<{ hash: string; response: string; imageUrl?: string }> {
   const parentHash = hookData.data.hash;
 
+  // Add the incoming message to history
+  addMessage({
+    timestamp: new Date(hookData.data.timestamp).getTime(),
+    role: 'user',
+    content: hookData.data.text,
+    castHash: hookData.data.hash,
+    parentHash: hookData.data.parent_hash || undefined
+  });
+
   try {
     console.log('responding to message');
     const { chainId, tokenTicker, tokenAddress } = parseUserMessage(hookData.data.text);
@@ -102,7 +112,7 @@ export async function respondToMessage(
 
     // generate prompt instructions to use for the sub-project site's cover image
     const imagePrompt = `
-      Generate a cover image for a crypto token with the ticker ${tokenTicker}
+      Generate a relevant cover image for a crypto token with the ticker ${tokenTicker}
       The token is on the ${CHAIN_CONFIG[chainIdInt].name} chain.
       The token description is: ${tokenMetadata?.description}.
       The user asked: ${hookData.data.text}
@@ -147,6 +157,7 @@ export async function respondToMessage(
       2. Mention the token ${tokenTicker} with address ${tokenAddress} on the ${CHAIN_CONFIG[chainIdInt].name} chain.
       3. Take into account the token description: ${tokenMetadata?.description} without repeating it to back to the user or overly focusing on the token description.
       4. Provide a link to the site: ${PROJECT_BUNDLE_URL}${subProjectId}
+      5. Avoid endorsing the token or suggesting that the token is a good investment.
     `
     const prompt = await getContextualPrompt(hookData.data.text, requiredPromptInfo, hookData.data.hash)
 
@@ -172,6 +183,15 @@ export async function respondToMessage(
     Promise.resolve()
       .then(() => getMarketData(tokenAddress, chainIdInt))
       .catch((error) => console.error('error getting market data for new subproject', error));
+
+    // Add the bot's response to history
+    addMessage({
+      timestamp: Date.now(),
+      role: 'assistant',
+      content: responseContent,
+      castHash: hash,
+      parentHash: parentHash
+    });
 
     return { hash, response: responseContent, imageUrl: imageUrl };
   } catch (error: any) {
