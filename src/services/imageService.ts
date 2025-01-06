@@ -100,6 +100,7 @@ export async function generateAndStoreImage(
 
 export async function listStoredImages(token?: string): Promise<StoredImage[]> {
   try {
+    console.log('Listing stored images for token:', token);
     const prefix = token ? `${token}/` : '';
     const command = new ListObjectsV2Command({
       Bucket: AWS_S3_BUCKET_NAME!,
@@ -120,6 +121,7 @@ export async function listStoredImages(token?: string): Promise<StoredImage[]> {
 
       const objects = response.Contents || [];
       for (const object of objects) {
+        console.log('S3 Image Object:', object);
         if (object.Key && object.Key.endsWith('.png')) {
           storedImages.push({
             url: `https://${AWS_S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/${object.Key}`,
