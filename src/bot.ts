@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import ethers from 'ethers';
 
 import { OPENROUTER_API_KEY, PROJECT_BUNDLE_URL, ChainId, CHAIN_CONFIG } from './config';
 import createSubProject, { parseUserMessage } from './createSubProject';
@@ -137,7 +138,7 @@ export async function respondToMessage(
     const summarizedImagePromptResponseContent = summarizedImagePromptResponse.choices[0]?.message?.content || `Generate a cover image for a crypto token with the ticker ${tokenTicker}`;
 
     // generate the image
-    const tokenKey = `${tokenTicker}-${tokenAddress}-${chainId}`;
+    const tokenKey = `${tokenTicker}-${ethers.getAddress(tokenAddress)}-${chainId}`;
     const imageUrl = await generateAndStoreImage(summarizedImagePromptResponseContent, tokenKey, 'cover');
     console.log('Generated image URL:', imageUrl);
 

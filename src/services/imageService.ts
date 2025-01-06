@@ -100,7 +100,7 @@ export async function generateAndStoreImage(
 
 export async function listStoredImages(tokenKey?: string): Promise<StoredImage[]> {
   try {
-    console.log('Listing stored images for token:', tokenKey);
+    console.log('Listing stored images for tokenKey:', tokenKey);
     const prefix = tokenKey ? `${tokenKey}/` : '';
     const command = new ListObjectsV2Command({
       Bucket: AWS_S3_BUCKET_NAME!,
