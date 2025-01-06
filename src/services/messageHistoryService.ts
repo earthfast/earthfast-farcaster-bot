@@ -64,27 +64,35 @@ function getRootHash(message: BotMessage): string {
 }
 
 export function addMessage(message: BotMessage): void {
-    const rootHash = getRootHash(message);
     const now = Date.now();
 
-    // Initialize or get existing thread
-    const entry = threadHistory[rootHash] || { messages: [], lastUpdated: now };
+    // If this message has a parent, try to find its thread first
+    if (message.parentHash) {
+        // Look through all threads to find one containing the parent
+        for (const [existingHash, entry] of Object.entries(threadHistory)) {
+            if (entry.messages.some(m => m.castHash === message.parentHash)) {
+                // Found the parent's thread - add message to it
+                entry.messages.push(message);
+                entry.lastUpdated = now;
 
-    // Add new message
-    entry.messages.push(message);
-    entry.lastUpdated = now;
+                // Invalidate summary when new messages are added
+                if (entry.summary) {
+                    entry.summary = undefined;
+                }
 
-    // Keep only messages from the last 7 days
-    entry.messages = entry.messages.filter(msg => 
-        (now - msg.timestamp) < HISTORY_DURATION
-    );
-
-    // Invalidate summary when new messages are added
-    if (entry.summary) {
-        entry.summary = undefined;
+                return; // Exit after adding to existing thread
+            }
+        }
     }
 
-    threadHistory[rootHash] = entry;
+    // If we get here, either:
+    // 1. This message has no parent
+    // 2. Or we couldn't find the parent's thread
+    // So create a new thread with this message as root
+    threadHistory[message.castHash] = {
+        messages: [message],
+        lastUpdated: now
+    };
 }
 
 export function getThread(rootHash: string): BotMessage[] {
