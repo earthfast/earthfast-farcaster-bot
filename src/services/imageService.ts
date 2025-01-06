@@ -55,7 +55,7 @@ export async function generateAndStoreImage(
     console.log('Generating image with prompt:', prompt);
 
     const response = await openai.images.generate({
-      model: 'dall-e-3',
+      model: 'x-ai/grok-2-vision-1212',
       prompt: prompt,
       n: 1,
       size: '1792x1024',

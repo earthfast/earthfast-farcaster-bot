@@ -129,7 +129,7 @@ export async function respondToMessage(
       1. Confirm the site creation
       2. Mention the token ${tokenTicker} with address ${tokenAddress} on the ${CHAIN_CONFIG[chainIdInt].name} chain.
       3. Take into account the token description: ${tokenMetadata?.description} without repeating it to back to the user or overly focusing on the token description.
-      4. Provide a link to the sub project site: ${PROJECT_BUNDLE_URL}${subProjectId}
+      4. Provide a link to the site: ${PROJECT_BUNDLE_URL}${subProjectId}
     `
     const prompt = await getContextualPrompt(hookData.data.text, requiredPromptInfo, hookData.data.hash)
 
