@@ -27,8 +27,8 @@ const authenticateRequest = (req: Request): boolean => {
 
 interface GenerateImageRequest {
   prompt: string;
-  identifier: string;
-  filename: string;
+  tokenKey: string;
+  imageType: string;
 }
 
 interface DeleteImageRequest {
@@ -206,8 +206,7 @@ const server = Bun.serve({
       if (url.pathname === '/api/images/list' && req.method === 'GET') {
         try {
           const tokenKey = url.searchParams.get('tokenKey');
-          const imageType = url.searchParams.get('imageType');
-          const images = await listStoredImages(tokenKey || undefined, imageType || undefined);
+          const images = await listStoredImages(tokenKey || undefined);
           return new Response(JSON.stringify({ success: true, images }), {
             status: 200,
             headers: {
