@@ -113,7 +113,7 @@ export async function respondToMessage(
       Summarize the following image prompt: ${imagePrompt}
       The summary should capture the essence of the image prompt, while also being creative and unique.
       Avoid any content that may be considered inappropriate or offensive, ensuring the image aligns with content policies
-      Mention that the image itself should use minimal words, and if a word is added to the image, it should be a real, existing word.
+      Mention that the image itself should not contain any text, real or imaginary.
     `;
     const summarizedImagePromptResponse = await openai.chat.completions.create({
       model: 'openai/gpt-4o-mini',
