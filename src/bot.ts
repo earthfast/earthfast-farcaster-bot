@@ -23,8 +23,6 @@ const openai = new OpenAI({
   },
 });
 
-// TODO: split prompt context between bot responses and image generation
-// TODO: add some form of bot memory
 /**
  * Function to generate a contextual prompt for a user's message.
  * @param userMessage - The user's message.
@@ -102,7 +100,7 @@ export async function respondToMessage(
     // retrieve the token metadata
     const tokenMetadata = await getTokenMetadata(tokenAddress, chainIdInt);
 
-    // generate a custom image to use for the sub-project site
+    // generate prompt instructions to use for the sub-project site's cover image
     const imagePrompt = `
       Generate a cover image for a crypto token with the ticker ${tokenTicker}
       The token is on the ${CHAIN_CONFIG[chainIdInt].name} chain.
@@ -110,8 +108,27 @@ export async function respondToMessage(
       If should include minimal words, and if a word is added to the image, it should be a real, existing word.
       The user asked: ${hookData.data.text}
     `;
+
+    // summarize the image prompt to limit harmful content
+    const summarizedImagePrompt = `
+      Summarize the following image prompt: ${imagePrompt}
+      The summary should capture the essence of the image prompt, while also being creative and unique.
+      It should be safe to use in a public setting.
+    `;
+    const summarizedImagePromptResponse = await openai.chat.completions.create({
+      model: 'openai/gpt-4o-mini',
+      messages: [
+        {
+          role: 'user',
+          content: summarizedImagePrompt,
+        },
+      ],
+    });
+    const summarizedImagePromptResponseContent = summarizedImagePromptResponse.choices[0]?.message?.content || `Generate a cover image for a crypto token with the ticker ${tokenTicker}`;
+
+    // generate the image
     const fileName = `${tokenTicker}-${tokenAddress}-${chainId}`;
-    const imageUrl = await generateAndStoreImage(imagePrompt, tokenAddress, fileName);
+    const imageUrl = await generateAndStoreImage(summarizedImagePromptResponseContent, tokenAddress, fileName);
     console.log('Generated image URL:', imageUrl);
 
     // Create the sub project

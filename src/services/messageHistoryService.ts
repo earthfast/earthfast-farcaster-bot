@@ -157,6 +157,8 @@ export async function getContextFromRelatedThreads(castHash: string, maxThreads 
         }
     }
 
+    console.log('thread summaries', summaries);
+
     return summaries.length > 0 
         ? `Related discussions:\n${summaries.join('\n')}`
         : '';
