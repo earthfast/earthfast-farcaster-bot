@@ -7,7 +7,7 @@ import { getMarketData } from './services/marketDataService';
 import character from './character.json';
 import { getTokenMetadata } from './services/metadataService';
 import { publishCast } from './neynarClient';
-import { getContextFromRelatedThreads, debugThreadState } from './services/messageHistoryService';
+import { getContextFromRelatedThreads } from './services/messageHistoryService';
 import { addMessage } from './services/messageHistoryService';
 
 // Validating necessary environment variables or configurations.
