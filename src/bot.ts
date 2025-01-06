@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import ethers from 'ethers';
+import { ethers } from 'ethers';
 
 import { OPENROUTER_API_KEY, PROJECT_BUNDLE_URL, ChainId, CHAIN_CONFIG } from './config';
 import createSubProject, { parseUserMessage } from './createSubProject';
