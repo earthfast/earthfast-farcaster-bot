@@ -137,8 +137,8 @@ export async function respondToMessage(
     const summarizedImagePromptResponseContent = summarizedImagePromptResponse.choices[0]?.message?.content || `Generate a cover image for a crypto token with the ticker ${tokenTicker}`;
 
     // generate the image
-    const fileName = `${tokenTicker}-${tokenAddress}-${chainId}`;
-    const imageUrl = await generateAndStoreImage(summarizedImagePromptResponseContent, tokenAddress, fileName);
+    const tokenKey = `${tokenTicker}-${tokenAddress}-${chainId}`;
+    const imageUrl = await generateAndStoreImage(summarizedImagePromptResponseContent, tokenKey, 'cover');
     console.log('Generated image URL:', imageUrl);
 
     // Create the sub project

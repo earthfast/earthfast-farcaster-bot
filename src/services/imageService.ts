@@ -48,8 +48,8 @@ function sanitizeMetadata(value: string): string {
 
 export async function generateAndStoreImage(
   prompt: string,
-  token: string,
-  filename: string,
+  tokenKey: string,
+  imageType: string,
 ): Promise<string> {
   try {
     console.log('Generating image with prompt:', prompt);
@@ -72,7 +72,7 @@ export async function generateAndStoreImage(
     const imageBuffer = await imageResponse.arrayBuffer();
 
     const timestamp = Date.now();
-    const key = `${token}/${filename}.png`;
+    const key = `${tokenKey}/${imageType}.png`;
 
     // Log the sanitized metadata for debugging
     const sanitizedPrompt = sanitizeMetadata(prompt);
@@ -98,10 +98,10 @@ export async function generateAndStoreImage(
   }
 }
 
-export async function listStoredImages(token?: string): Promise<StoredImage[]> {
+export async function listStoredImages(tokenKey?: string): Promise<StoredImage[]> {
   try {
-    console.log('Listing stored images for token:', token);
-    const prefix = token ? `${token}/` : '';
+    console.log('Listing stored images for token:', tokenKey);
+    const prefix = tokenKey ? `${tokenKey}/` : '';
     const command = new ListObjectsV2Command({
       Bucket: AWS_S3_BUCKET_NAME!,
       Prefix: prefix,
@@ -118,6 +118,8 @@ export async function listStoredImages(token?: string): Promise<StoredImage[]> {
           ContinuationToken: continuationToken,
         }),
       );
+
+      console.log('S3 Response:', response);
 
       const objects = response.Contents || [];
       for (const object of objects) {

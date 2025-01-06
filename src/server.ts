@@ -180,16 +180,16 @@ const server = Bun.serve({
       if (url.pathname === '/api/images/generate' && req.method === 'POST') {
         try {
           const body = await req.json();
-          const { prompt, identifier, filename } = body as GenerateImageRequest;
+          const { prompt, tokenKey, imageType } = body as GenerateImageRequest;
 
-          if (!prompt || !identifier) {
-            return new Response(JSON.stringify({ error: 'prompt and identifier are required' }), {
+          if (!prompt || !tokenKey) {
+            return new Response(JSON.stringify({ error: 'prompt and tokenKey are required' }), {
               status: 400,
               headers: { 'Content-Type': 'application/json' },
             });
           }
 
-          const imageUrl = await generateAndStoreImage(prompt, identifier, filename);
+          const imageUrl = await generateAndStoreImage(prompt, tokenKey, imageType);
           return new Response(JSON.stringify({ success: true, imageUrl }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
@@ -205,8 +205,9 @@ const server = Bun.serve({
       // List images endpoint
       if (url.pathname === '/api/images/list' && req.method === 'GET') {
         try {
-          const prefix = url.searchParams.get('prefix');
-          const images = await listStoredImages(prefix || undefined);
+          const tokenKey = url.searchParams.get('tokenKey');
+          const imageType = url.searchParams.get('imageType');
+          const images = await listStoredImages(tokenKey || undefined, imageType || undefined);
           return new Response(JSON.stringify({ success: true, images }), {
             status: 200,
             headers: {
