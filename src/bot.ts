@@ -80,6 +80,18 @@ export async function errorAIResponse(
     completion.choices[0]?.message?.content ||
     'Sorry, I encountered an error while creating your site. Please try again later 🔧';
   const hash = await publishCast(responseContent, parentHash);
+
+  // Add error response to thread history
+  if (hash) {
+    addMessage({
+      timestamp: Date.now(),
+      role: 'assistant',
+      content: responseContent,
+      castHash: hash,
+      parentHash
+    });
+  }
+
   return { hash, response: responseContent };
 }
 
@@ -94,7 +106,7 @@ export async function respondToMessage(
 ): Promise<{ hash: string; response: string; imageUrl?: string }> {
   const parentHash = hookData.data.hash;
 
-  // Add the incoming message to history
+  // Add the incoming user message to history
   addMessage({
     timestamp: new Date(hookData.data.timestamp).getTime(),
     role: 'user',
@@ -179,6 +191,7 @@ export async function respondToMessage(
 
     // publish the response to farcaster
     const hash = await publishCast(responseContent, parentHash);
+    console.log('Published bot response with hash:', hash);
 
     // run getMarketData asynchronously on the new subProject
     Promise.resolve()

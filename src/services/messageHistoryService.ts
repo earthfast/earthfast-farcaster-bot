@@ -42,7 +42,7 @@ const threadHistory: Record<string, ThreadEntry> = {};
 function getRootHash(message: BotMessage): string {
     let currentHash = message.castHash;
     let currentMessage = message;
-    
+
     while (currentMessage.parentHash) {
         // Look for messages with this parent hash
         for (const [hash, entry] of Object.entries(threadHistory)) {
@@ -63,36 +63,90 @@ function getRootHash(message: BotMessage): string {
     return currentHash;
 }
 
+// Add this helper function to find the root thread for a message
+function findRootThread(parentHash: string): ThreadEntry | null {
+    // First try direct lookup
+    if (threadHistory[parentHash]) {
+        return threadHistory[parentHash];
+    }
+
+    // If not found directly, search through all threads
+    for (const entry of Object.values(threadHistory)) {
+        if (entry.messages.some(m => m.castHash === parentHash)) {
+            return entry;
+        }
+    }
+    return null;
+}
+
 export function addMessage(message: BotMessage): void {
     const now = Date.now();
 
-    // If this message has a parent, try to find its thread first
+    // If this message has a parent, try to find its thread
     if (message.parentHash) {
-        // Look through all threads to find one containing the parent
-        for (const [existingHash, entry] of Object.entries(threadHistory)) {
-            if (entry.messages.some(m => m.castHash === message.parentHash)) {
-                // Found the parent's thread - add message to it
-                entry.messages.push(message);
-                entry.lastUpdated = now;
+        const rootThread = findRootThread(message.parentHash);
 
-                // Invalidate summary when new messages are added
-                if (entry.summary) {
-                    entry.summary = undefined;
-                }
+        if (rootThread) {
+            // Add to existing thread
+            rootThread.messages.push(message);
+            rootThread.lastUpdated = now;
 
-                return; // Exit after adding to existing thread
+            // Invalidate summary
+            if (rootThread.summary) {
+                rootThread.summary = undefined;
             }
+
+            // If this message was the root of another thread, merge that thread
+            const childThread = threadHistory[message.castHash];
+            if (childThread) {
+                rootThread.messages.push(...childThread.messages);
+                delete threadHistory[message.castHash];
+            }
+
+            // Sort messages by timestamp
+            rootThread.messages.sort((a, b) => a.timestamp - b.timestamp);
+
+            // Store thread under the earliest message's hash
+            const earliestMessage = rootThread.messages[0];
+            if (earliestMessage.castHash !== message.parentHash) {
+                delete threadHistory[message.parentHash];
+                threadHistory[earliestMessage.castHash] = rootThread;
+            }
+
+            return;
         }
     }
 
     // If we get here, either:
-    // 1. This message has no parent
-    // 2. Or we couldn't find the parent's thread
-    // So create a new thread with this message as root
+    // 1. This message has no parent, or
+    // 2. We couldn't find the parent's thread
+    // Create a new thread
     threadHistory[message.castHash] = {
         messages: [message],
         lastUpdated: now
     };
+
+    logThreadState(message, 'Adding Message');
+}
+
+function logThreadState(message: BotMessage, action: string) {
+    console.log(`\n=== Thread State After ${action} ===`);
+    console.log('Message:', {
+        hash: message.castHash,
+        parent: message.parentHash,
+        content: message.content.substring(0, 50) + '...'
+    });
+    console.log('Threads:');
+    Object.entries(threadHistory).forEach(([hash, entry]) => {
+        console.log(`\nThread ${hash}:`);
+        entry.messages.forEach(msg => {
+            console.log(`- ${msg.role} (${msg.castHash}): ${msg.content.substring(0, 30)}...`);
+            if (msg.parentHash) {
+                console.log(`  parent: ${msg.parentHash}`);
+            }
+        });
+    });
+    console.log('================\n');
 }
 
 export function getThread(rootHash: string): BotMessage[] {
@@ -104,20 +158,48 @@ export function getThread(rootHash: string): BotMessage[] {
     return entry.messages.sort((a, b) => a.timestamp - b.timestamp);
 }
 
+// Update getRelatedThreads to be more thorough
 export function getRelatedThreads(castHash: string): string[] {
-    // Find threads that are related to this cast hash
-    return Object.entries(threadHistory)
-        .filter(([rootHash, entry]) => 
-            // Check if any message in the thread:
-            entry.messages.some(msg => 
-                msg.castHash === castHash || // Is this cast
-                msg.parentHash === castHash || // Has this cast as parent
-                msg.content.includes(castHash) || // Mentions this cast
-                // Is in the same thread hierarchy
-                msg.parentHash && getThread(msg.parentHash).some(m => m.castHash === castHash)
-            )
-        )
-        .map(([rootHash]) => rootHash);
+    console.log('Getting related threads for castHash:', castHash);
+    console.log('Thread history:', JSON.stringify(threadHistory, null, 2));
+
+    const relatedHashes = new Set<string>();
+
+    // First pass: find directly related threads
+    Object.entries(threadHistory).forEach(([rootHash, entry]) => {
+        const isRelated = entry.messages.some(msg =>
+            msg.castHash === castHash || // Is this cast
+            msg.parentHash === castHash || // Has this cast as parent
+            msg.content.includes(castHash) || // Mentions this cast
+            // Is in the same thread hierarchy
+            (msg.parentHash && entry.messages.some(m => m.castHash === msg.parentHash))
+        );
+
+        if (isRelated) {
+            relatedHashes.add(rootHash);
+        }
+    });
+
+    // Second pass: find threads that share messages with related threads
+    [...relatedHashes].forEach(relatedHash => {
+        const relatedMessages = threadHistory[relatedHash].messages;
+        Object.entries(threadHistory).forEach(([rootHash, entry]) => {
+            if (!relatedHashes.has(rootHash)) {
+                const sharesMessages = entry.messages.some(msg =>
+                    relatedMessages.some(relatedMsg =>
+                        msg.castHash === relatedMsg.castHash ||
+                        msg.parentHash === relatedMsg.castHash ||
+                        relatedMsg.parentHash === msg.castHash
+                    )
+                );
+                if (sharesMessages) {
+                    relatedHashes.add(rootHash);
+                }
+            }
+        });
+    });
+
+    return Array.from(relatedHashes);
 }
 
 async function summarizeThread(messages: BotMessage[]): Promise<string> {
