@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
-import projectMultiplexAbi from '../abi/ProjectMultiplex.json';
+import projectMultiplexAbi from '../../abi/ProjectMultiplex.json';
 import { getMarketData } from './marketDataService';
-import { JSON_RPC_URL, ChainId } from './config';
+import { JSON_RPC_URL, ChainId } from '../config';
 
 interface SubProject {
   chainId: number;

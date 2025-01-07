@@ -1,9 +1,10 @@
 import neynarClient from "./neynarClient";
 import { respondToMessage } from "./bot";
-import { getMarketData } from "./marketDataService";
-import { generateAndStoreImage, listStoredImages, deleteImage } from './imageService';
 import { ChainId, FARCASTER_BOT_API_KEY, SIGNER_UUID } from "./config";
-import { MarketDataPollingService } from './marketDataPollingService';
+import { getMarketData } from "./services/marketDataService";
+import { generateAndStoreImage, listStoredImages, deleteImage } from './services/imageService';
+import { MarketDataPollingService } from './services/marketDataPollingService';
+import { getTokenMetadata } from './services/metadataService';
 
 // TODO: move CORS headers to a middleware handler
 // CORS headers for /market-data endpoint
@@ -26,8 +27,8 @@ const authenticateRequest = (req: Request): boolean => {
 
 interface GenerateImageRequest {
   prompt: string;
-  identifier: string;
-  filename: string;
+  tokenKey: string;
+  imageType: string;
 }
 
 interface DeleteImageRequest {
@@ -79,6 +80,40 @@ const server = Bun.serve({
       } catch (error) {
         console.error('Error fetching market data:', error);
         return new Response(JSON.stringify({ error: 'Failed to fetch market data' }), { 
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    }
+
+    // handle token metadata requests from the client
+    if (url.pathname === '/token-metadata') {
+      try {
+        console.log('Fetching token metadata');
+        const tokenAddress = url.searchParams.get('address');
+        const chainId = url.searchParams.get('chainId');
+
+        if (!tokenAddress || !chainId) {
+          return new Response('Missing tokenAddress or chainId parameter', {
+            status: 400,
+            headers: corsHeaders
+          });
+        }
+
+        const metadata = await getTokenMetadata(tokenAddress, parseInt(chainId) as ChainId);
+        return new Response(JSON.stringify(metadata), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+        });
+      } catch (error) {
+        console.error('Error fetching token metadata:', error);
+        return new Response(JSON.stringify({ error: 'Failed to fetch token metadata' }), { 
           status: 500,
           headers: {
             ...corsHeaders,
@@ -145,16 +180,16 @@ const server = Bun.serve({
       if (url.pathname === '/api/images/generate' && req.method === 'POST') {
         try {
           const body = await req.json();
-          const { prompt, identifier, filename } = body as GenerateImageRequest;
+          const { prompt, tokenKey, imageType } = body as GenerateImageRequest;
 
-          if (!prompt || !identifier) {
-            return new Response(JSON.stringify({ error: 'prompt and identifier are required' }), {
+          if (!prompt || !tokenKey) {
+            return new Response(JSON.stringify({ error: 'prompt and tokenKey are required' }), {
               status: 400,
               headers: { 'Content-Type': 'application/json' },
             });
           }
 
-          const imageUrl = await generateAndStoreImage(prompt, identifier, filename);
+          const imageUrl = await generateAndStoreImage(prompt, tokenKey, imageType);
           return new Response(JSON.stringify({ success: true, imageUrl }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
@@ -170,8 +205,8 @@ const server = Bun.serve({
       // List images endpoint
       if (url.pathname === '/api/images/list' && req.method === 'GET') {
         try {
-          const prefix = url.searchParams.get('prefix');
-          const images = await listStoredImages(prefix || undefined);
+          const tokenKey = url.searchParams.get('tokenKey');
+          const images = await listStoredImages(tokenKey || undefined);
           return new Response(JSON.stringify({ success: true, images }), {
             status: 200,
             headers: {

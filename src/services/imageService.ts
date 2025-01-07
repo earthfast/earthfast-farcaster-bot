@@ -13,7 +13,7 @@ import {
   AWS_ACCESS_KEY_ID,
   AWS_SECRET_ACCESS_KEY,
   AWS_S3_BUCKET_NAME,
-} from './config';
+} from '../config';
 
 const openai = new OpenAI({
   apiKey: OPENAI_API_KEY,
@@ -35,10 +35,21 @@ export interface StoredImage {
   prompt?: string;
 }
 
+function sanitizeMetadata(value: string): string {
+  // Remove newlines, tabs and convert to single line
+  const singleLine = value.replace(/[\n\r\t]/g, ' ').trim();
+
+  // Remove all special characters and emojis, keep only alphanumeric and basic punctuation
+  const cleaned = singleLine.replace(/[^a-zA-Z0-9\s.,!?-]/g, '');
+
+  // Ensure the string isn't too long for S3 metadata
+  return cleaned.slice(0, 512);
+}
+
 export async function generateAndStoreImage(
   prompt: string,
-  token: string,
-  filename: string,
+  tokenKey: string,
+  imageType: string,
 ): Promise<string> {
   try {
     console.log('Generating image with prompt:', prompt);
@@ -47,7 +58,7 @@ export async function generateAndStoreImage(
       model: 'dall-e-3',
       prompt: prompt,
       n: 1,
-      size: '1024x1024',
+      size: '1792x1024',
       quality: 'standard',
     });
 
@@ -61,7 +72,11 @@ export async function generateAndStoreImage(
     const imageBuffer = await imageResponse.arrayBuffer();
 
     const timestamp = Date.now();
-    const key = `${token}/${filename}.png`;
+    const key = `${tokenKey}/${imageType}.png`;
+
+    // Log the sanitized metadata for debugging
+    const sanitizedPrompt = sanitizeMetadata(prompt);
+    console.log('Sanitized metadata prompt:', sanitizedPrompt);
 
     await s3Client.send(
       new PutObjectCommand({
@@ -70,7 +85,7 @@ export async function generateAndStoreImage(
         Body: Buffer.from(imageBuffer),
         ContentType: 'image/png',
         Metadata: {
-          prompt: prompt,
+          prompt: sanitizedPrompt,
           timestamp: timestamp.toString(),
         },
       }),
@@ -83,9 +98,10 @@ export async function generateAndStoreImage(
   }
 }
 
-export async function listStoredImages(token?: string): Promise<StoredImage[]> {
+export async function listStoredImages(tokenKey?: string): Promise<StoredImage[]> {
   try {
-    const prefix = token ? `${token}/` : '';
+    console.log('Listing stored images for tokenKey:', tokenKey);
+    const prefix = tokenKey ? `${tokenKey}/` : '';
     const command = new ListObjectsV2Command({
       Bucket: AWS_S3_BUCKET_NAME!,
       Prefix: prefix,
@@ -103,8 +119,11 @@ export async function listStoredImages(token?: string): Promise<StoredImage[]> {
         }),
       );
 
+      console.log('S3 Response:', response);
+
       const objects = response.Contents || [];
       for (const object of objects) {
+        console.log('S3 Image Object:', object);
         if (object.Key && object.Key.endsWith('.png')) {
           storedImages.push({
             url: `https://${AWS_S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/${object.Key}`,

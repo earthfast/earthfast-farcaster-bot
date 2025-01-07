@@ -1,4 +1,3 @@
-import { viemPublicClient } from './viemClient';
 import { ethers } from 'ethers';
 import projectMultiplexAbi from '../abi/ProjectMultiplex.json';
 import { JSON_RPC_URL, FARCASTER_BOT_MNEMONIC } from './config';

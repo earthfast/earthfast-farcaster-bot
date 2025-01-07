@@ -1,4 +1,4 @@
-import { generateAndStoreImage, listStoredImages, deleteImage } from '../src/imageService';
+import { generateAndStoreImage, listStoredImages, deleteImage } from '../src/services/imageService';
 
 async function test() {
   try {

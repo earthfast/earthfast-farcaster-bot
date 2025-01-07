@@ -1,5 +1,5 @@
 import axios from "axios";
-import { BITQUERY_API_KEY, CHAIN_CONFIG, ChainId } from "./config";
+import { BITQUERY_API_KEY, CHAIN_CONFIG, ChainId } from "../config";
 
 export interface TokenMarketMetadata {
     price: number;
@@ -127,7 +127,7 @@ async function fetchMarketData(address: string, chainId: ChainId): Promise<Token
                 marketData.holders = evmData.TokenHolders[0].uniq;
             }
         } catch (error) {
-            console.error("Error extracting holders data:", error);
+            // console.error("Error extracting holders data:", error);
         }
 
         // Safely extract DEX trade data
@@ -143,13 +143,13 @@ async function fetchMarketData(address: string, chainId: ChainId): Promise<Token
                 marketData.totalSells = dexData.totalsells ?? marketData.totalSells;
             }
         } catch (error) {
-            console.error("Error extracting DEX trade data:", error);
+            // console.error("Error extracting DEX trade data:", error);
         }
 
         return marketData;
 
     } catch (error) {
-        console.error("Error fetching market data from Bitquery:", error);
+        // console.error("Error fetching market data from Bitquery:", error);
         // throw error;
         return marketData;
     }
