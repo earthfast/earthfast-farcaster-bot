@@ -1,6 +1,9 @@
 import { ChainId, CHAIN_CONFIG } from "../config";
 
 export interface TokenMetadata {
+    name: string;
+    symbol: string;
+    decimals: number;
     description: string;
     imageUrl: string; // image_url
     websites: string[];
@@ -12,6 +15,9 @@ export interface TokenMetadata {
 interface TokenMetadataResponse {
     data: {
         attributes: {
+            name: string;
+            symbol: string;
+            decimals: number;
             description: string;
             image_url: string;
             websites: string[];
@@ -76,6 +82,9 @@ async function fetchTokenMetadata(address: string, chainId: ChainId): Promise<To
         const { attributes } = responseData.data;
 
         return {
+            name: attributes.name,
+            symbol: attributes.symbol,
+            decimals: attributes.decimals,
             description: attributes.description,
             imageUrl: attributes.image_url,
             websites: attributes.websites,
