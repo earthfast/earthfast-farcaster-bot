@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import projectMultiplexAbi from '../abi/ProjectMultiplex.json';
-import { JSON_RPC_URL, FARCASTER_BOT_MNEMONIC } from './config';
+import { JSON_RPC_URL, FARCASTER_BOT_MNEMONIC, SOLANA_CHAIN_ID } from './config';
 import { mnemonicToAccount } from 'viem/accounts';
 import { bytesToHex } from 'viem';
 
@@ -17,12 +17,16 @@ export function parseUserMessage(userMessage: string) {
   }
 
   // Take only the first three space-separated parameters
-  const [chainId, tokenTicker, tokenAddress, ...rest] = createParams.split(' ').filter(Boolean);
+  let [chainId, tokenTicker, tokenAddress, ...rest] = createParams.split(' ').filter(Boolean);
 
-  if (!chainId || !tokenTicker || !tokenAddress || !ethers.isAddress(tokenAddress)) {
+  if (!chainId || !tokenTicker || !tokenAddress || (chainId !== SOLANA_CHAIN_ID && !ethers.isAddress(tokenAddress))) {
     throw new Error(
       'Missing required parameters. Expected: !create <chainId> <token ticker> <token address>',
     );
+  }
+
+  if (chainId === 'Solana' || chainId === 'solana' || chainId === 'sol') {
+    chainId = SOLANA_CHAIN_ID;
   }
 
   return { chainId, tokenTicker, tokenAddress };

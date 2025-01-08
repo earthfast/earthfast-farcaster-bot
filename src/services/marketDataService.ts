@@ -53,6 +53,23 @@ async function fetchMarketData(address: string, chainId: ChainId): Promise<Token
     const today = new Date().toISOString().split('T')[0];
     const chainName = chainId === 1 ? "eth" : CHAIN_CONFIG[chainId].name;
 
+    // Initialize with default values
+    const marketData: TokenMarketMetadata = {
+      price: 0,
+      holders: "0",
+      totalTradeVolume: "0",
+      totalTrades: "0",
+      totalBuyVolume: "0",
+      totalSellVolume: "0",
+      totalBuys: "0",
+      totalSells: "0",
+  };
+
+    // TODO: change this to query bitquery for solana data properly
+    if (chainId === "solana") {
+        return marketData;
+    }
+
     console.log("Fetching fresh market data");
 
     const queryData = JSON.stringify({
@@ -65,26 +82,6 @@ async function fetchMarketData(address: string, chainId: ChainId): Promise<Token
               where: {Balance: {Amount: {gt: "0"}}}
             ) {
               uniq(of: Holder_Address)
-            }
-            DEXTradeByTokens(
-              limit: {count: 1}
-              where: {
-                Trade: {Side: {Currency: {SmartContract: {is: "${address}"}}}}
-              }
-            ) {
-              price: median(of: Trade_Price)
-              total_trades: count
-              total_buy_volume: sum(
-                of: Trade_Side_AmountInUSD
-                if: {Trade: {Side: {Type: {is: buy}}}}
-              )
-              total_sell_volume: sum(
-                of: Trade_Side_AmountInUSD
-                if: {Trade: {Side: {Type: {is: sell}}}}
-              )            
-              totalbuys: count(if: {Trade: {Side: {Type: {is: sell}}}})
-              totalsells: count(if: {Trade: {Side: {Type: {is: buy}}}})
-              total_traded_volume: sum(of: Trade_Side_AmountInUSD)
             }
           }
         }`
@@ -100,18 +97,6 @@ async function fetchMarketData(address: string, chainId: ChainId): Promise<Token
         },
         data: queryData,
     }
-  
-    // Initialize with default values
-    const marketData: TokenMarketMetadata = {
-        price: 0,
-        holders: "0",
-        totalTradeVolume: "0",
-        totalTrades: "0",
-        totalBuyVolume: "0",
-        totalSellVolume: "0",
-        totalBuys: "0",
-        totalSells: "0",
-    };
 
     try {
         const response = await axios.request(config);
