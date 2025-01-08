@@ -66,7 +66,7 @@ async function fetchMarketData(address: string, chainId: ChainId): Promise<Token
   };
 
     // TODO: change this to query bitquery for solana data properly
-    if (chainId === 900) {
+    if (chainId === "solana") {
         return marketData;
     }
 

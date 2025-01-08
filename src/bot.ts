@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { ethers } from 'ethers';
 
-import { OPENROUTER_API_KEY, PROJECT_BUNDLE_URL, ChainId, CHAIN_CONFIG } from './config';
+import { OPENROUTER_API_KEY, PROJECT_BUNDLE_URL, ChainId, CHAIN_CONFIG, SOLANA_CHAIN_ID } from './config';
 import createSubProject, { parseUserMessage } from './createSubProject';
 import { generateAndStoreImage } from './services/imageService';
 import { getMarketData } from './services/marketDataService';
@@ -118,15 +118,15 @@ export async function respondToMessage(
   try {
     console.log('responding to message');
     const { chainId, tokenTicker, tokenAddress } = parseUserMessage(hookData.data.text);
-    const chainIdInt = parseInt(chainId) as ChainId;
+    const chainIdParsed = chainId === SOLANA_CHAIN_ID ? SOLANA_CHAIN_ID as ChainId : parseInt(chainId) as ChainId;
 
     // retrieve the token metadata
-    const tokenMetadata = await getTokenMetadata(tokenAddress, chainIdInt);
+    const tokenMetadata = await getTokenMetadata(tokenAddress, chainIdParsed);
 
     // generate prompt instructions to use for the sub-project site's cover image
     const imagePrompt = `
       Generate a relevant cover image for a crypto token with the ticker ${tokenTicker}
-      The token is on the ${CHAIN_CONFIG[chainIdInt].name} chain.
+      The token is on the ${CHAIN_CONFIG[chainIdParsed].name} chain.
       The token description is: ${tokenMetadata?.description}.
       The user asked: ${hookData.data.text}
     `;
@@ -167,7 +167,7 @@ export async function respondToMessage(
     const requiredPromptInfo = `
       The response must:
       1. Confirm the site creation
-      2. Mention the token ${tokenTicker} with address ${tokenAddress} on the ${CHAIN_CONFIG[chainIdInt].name} chain.
+      2. Mention the token ${tokenTicker} with address ${tokenAddress} on the ${CHAIN_CONFIG[chainIdParsed].name} chain.
       3. Take into account the token description: ${tokenMetadata?.description} without repeating it to back to the user or overly focusing on the token description.
       4. Provide a link to the site: ${PROJECT_BUNDLE_URL}${subProjectId}
       5. Avoid endorsing the token or suggesting that the token is a good investment.
@@ -195,7 +195,7 @@ export async function respondToMessage(
 
     // run getMarketData asynchronously on the new subProject
     Promise.resolve()
-      .then(() => getMarketData(tokenAddress, chainIdInt))
+      .then(() => getMarketData(tokenAddress, chainIdParsed))
       .catch((error) => console.error('error getting market data for new subproject', error));
 
     // Add the bot's response to history

@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import projectMultiplexAbi from '../abi/ProjectMultiplex.json';
-import { JSON_RPC_URL, FARCASTER_BOT_MNEMONIC } from './config';
+import { JSON_RPC_URL, FARCASTER_BOT_MNEMONIC, SOLANA_CHAIN_ID } from './config';
 import { mnemonicToAccount } from 'viem/accounts';
 import { bytesToHex } from 'viem';
 
@@ -26,7 +26,7 @@ export function parseUserMessage(userMessage: string) {
   }
 
   if (chainId === 'Solana' || chainId === 'solana' || chainId === 'sol') {
-    chainId = '900';
+    chainId = SOLANA_CHAIN_ID;
   }
 
   return { chainId, tokenTicker, tokenAddress };
