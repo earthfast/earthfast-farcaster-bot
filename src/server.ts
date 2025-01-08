@@ -1,6 +1,6 @@
 import neynarClient from "./neynarClient";
 import { respondToMessage } from "./bot";
-import { ChainId, FARCASTER_BOT_API_KEY, SIGNER_UUID } from "./config";
+import { ChainId, FARCASTER_BOT_API_KEY, SIGNER_UUID, SOLANA_CHAIN_ID } from "./config";
 import { getMarketData } from "./services/marketDataService";
 import { generateAndStoreImage, listStoredImages, deleteImage } from './services/imageService';
 import { MarketDataPollingService } from './services/marketDataPollingService';
@@ -69,7 +69,8 @@ const server = Bun.serve({
           });
         }
 
-        const marketData = await getMarketData(address, parseInt(chainId) as ChainId);
+        const chainIdParsed = chainId === SOLANA_CHAIN_ID ? SOLANA_CHAIN_ID : parseInt(chainId) as ChainId;
+        const marketData = await getMarketData(address, chainIdParsed);
         return new Response(JSON.stringify(marketData), {
           status: 200,
           headers: {
@@ -103,7 +104,8 @@ const server = Bun.serve({
           });
         }
 
-        const metadata = await getTokenMetadata(tokenAddress, parseInt(chainId) as ChainId);
+        const chainIdParsed = chainId === SOLANA_CHAIN_ID ? SOLANA_CHAIN_ID : parseInt(chainId) as ChainId;
+        const metadata = await getTokenMetadata(tokenAddress, chainIdParsed);
         return new Response(JSON.stringify(metadata), {
         status: 200,
         headers: {
