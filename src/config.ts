@@ -19,6 +19,7 @@ export const BITQUERY_API_KEY = process.env.BITQUERY_API_KEY!;
 
 // CHAIN IDS
 export const ETHEREUM_CHAIN_ID = 1;
+export const SOLANA_CHAIN_ID = 900; // unofficial chainId for solana used by a few RPC providers
 export const POLYGON_CHAIN_ID = 137;
 export const BSC_CHAIN_ID = 56;
 export const ARBITRUM_CHAIN_ID = 42161;
@@ -48,6 +49,9 @@ export const CHAIN_CONFIG = {
   },
   [SEPOLIA_CHAIN_ID]: {
     name: "sepolia",
+  },
+  [SOLANA_CHAIN_ID]: {
+    name: "solana",
   },
 } as const;
 

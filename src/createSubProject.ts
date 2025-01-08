@@ -17,12 +17,16 @@ export function parseUserMessage(userMessage: string) {
   }
 
   // Take only the first three space-separated parameters
-  const [chainId, tokenTicker, tokenAddress, ...rest] = createParams.split(' ').filter(Boolean);
+  let [chainId, tokenTicker, tokenAddress, ...rest] = createParams.split(' ').filter(Boolean);
 
   if (!chainId || !tokenTicker || !tokenAddress || !ethers.isAddress(tokenAddress)) {
     throw new Error(
       'Missing required parameters. Expected: !create <chainId> <token ticker> <token address>',
     );
+  }
+
+  if (chainId === 'Solana' || chainId === 'solana' || chainId === 'sol') {
+    chainId = '900';
   }
 
   return { chainId, tokenTicker, tokenAddress };
