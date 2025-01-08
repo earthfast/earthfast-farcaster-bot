@@ -19,7 +19,7 @@ export function parseUserMessage(userMessage: string) {
   // Take only the first three space-separated parameters
   let [chainId, tokenTicker, tokenAddress, ...rest] = createParams.split(' ').filter(Boolean);
 
-  if (!chainId || !tokenTicker || !tokenAddress || !ethers.isAddress(tokenAddress)) {
+  if (!chainId || !tokenTicker || !tokenAddress || (chainId !== SOLANA_CHAIN_ID && !ethers.isAddress(tokenAddress))) {
     throw new Error(
       'Missing required parameters. Expected: !create <chainId> <token ticker> <token address>',
     );
