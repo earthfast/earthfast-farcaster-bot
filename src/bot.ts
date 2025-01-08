@@ -150,7 +150,8 @@ export async function respondToMessage(
     const summarizedImagePromptResponseContent = summarizedImagePromptResponse.choices[0]?.message?.content || `Generate a cover image for a crypto token with the ticker ${tokenTicker}`;
 
     // generate the image
-    const tokenKey = `${tokenTicker}-${ethers.getAddress(tokenAddress)}-${chainId}`;
+    const imageAddress = chainIdParsed === SOLANA_CHAIN_ID ? tokenAddress : ethers.getAddress(tokenAddress);
+    const tokenKey = `${tokenTicker}-${imageAddress}-${chainIdParsed}`;
     const imageUrl = await generateAndStoreImage(summarizedImagePromptResponseContent, tokenKey, 'cover');
     console.log('Generated image URL:', imageUrl);
 
