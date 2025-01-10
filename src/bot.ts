@@ -55,6 +55,7 @@ export async function determineMessageIntent(message: string): Promise<MessageIn
   );
 
   if (hasTokenAddress && hasSiteIntent) {
+    console.log('Meant to create a site: ', message);
     // Extract potential token information
     const words = message
       .split(/[\s\n]+/) // Split on whitespace and newlines
@@ -71,8 +72,6 @@ export async function determineMessageIntent(message: string): Promise<MessageIn
         break;
       }
     }
-
-    console.log('tokenAddress from determineMessageIntent: ', tokenAddress);
 
     if (tokenAddress) {
       // Use OpenAI to extract chain and ticker information
