@@ -42,7 +42,7 @@ function isValidSolanaAddress(address: string): boolean {
   }
 }
 
-export function determineMessageIntent(message: string): MessageIntent {
+export async function determineMessageIntent(message: string): Promise<MessageIntent> {
   // Check if message contains token address-like pattern and keywords about creating/making/building sites
   const hasTokenAddress = /0x[a-fA-F0-9]{40}/.test(message) || 
                          message.includes('sol') || 
@@ -56,35 +56,62 @@ export function determineMessageIntent(message: string): MessageIntent {
   if (hasTokenAddress && hasSiteIntent) {
     // Extract potential token information
     const words = message.split(' ').filter(Boolean);
-    let chainId: string | undefined,
-        tokenTicker: string | undefined,
-        tokenAddress: string | undefined;
+    let tokenAddress: string | undefined;
 
     // Look for token address pattern
-    for (let i = 0; i < words.length; i++) {
-      const word = words[i];
+    for (const word of words) {
       if (ethers.isAddress(word)) {
         tokenAddress = word;
-        // Look for potential ticker in surrounding words
-        tokenTicker = words[i - 1] || words[i + 1];
         break;
       } else if (isValidSolanaAddress(word)) {
-        chainId = SOLANA_CHAIN_ID;
         tokenAddress = word;
-        tokenTicker = words[i - 1] || words[i + 1];
         break;
       }
     }
 
-    // Default to mainnet if chain not specified
-    chainId = chainId || '1';
+    if (tokenAddress) {
+      // Use OpenAI to extract chain and ticker information
+      const extractionPrompt = `
+        Extract the following information from this message about creating a site for a token.
+        If you can't determine something with high confidence, return null for that field.
+        Message: "${message}"
 
-    return {
-      type: 'create_site',
-      chainId,
-      tokenTicker,
-      tokenAddress
-    };
+        Required format (JSON):
+        {
+          "chainId": "1" for Ethereum, "137" for Polygon, "56" for BSC, "solana" for Solana, "8453" for Base, "42161" for Arbitrum, "10" for Optimism, etc. (or null if unclear),
+          "tokenTicker": "the token's ticker symbol or null if unclear"
+        }
+
+        Rules:
+        - For chainId, default to "1" (Ethereum) if the chain isn't explicitly mentioned
+        - The token ticker should be a short symbol (like "ETH", "USDC", etc.)
+        - If multiple potential tickers are found, choose the one most likely to be associated with ${tokenAddress}
+        - Respond only with the JSON object, no other text
+      `;
+
+      const completion = await openai.chat.completions.create({
+        model: 'openai/gpt-4o-mini',
+        messages: [{ role: 'user', content: extractionPrompt }],
+        response_format: { type: "json_object" }
+      });
+
+      try {
+        const extractedInfo = JSON.parse(completion.choices[0]?.message?.content || '{}');
+        const chainId = extractedInfo.chainId;
+        const tokenTicker = extractedInfo.tokenTicker;
+
+        if (chainId && tokenTicker) {
+          return {
+            type: 'create_site',
+            chainId,
+            tokenTicker,
+            tokenAddress
+          };
+        }
+      } catch (error) {
+        console.error('Error parsing OpenAI response:', error);
+      }
+    }
   }
 
   return { type: 'chat' };
@@ -220,7 +247,7 @@ export async function respondToMessage(
 
   try {
     // Determine the user's intent
-    const intent = determineMessageIntent(userMessage);
+    const intent = await determineMessageIntent(userMessage);
     const { chainId, tokenTicker, tokenAddress } = intent;
 
     if (!chainId || !tokenTicker || !tokenAddress || intent.type === 'chat') {
