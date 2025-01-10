@@ -224,8 +224,6 @@ async function generateChatResponse(
   return { hash, response: responseContent };
 }
 
-// TODO: need to split this based upon whether the user is trying to create a sub-project or not
-// TODO: update the hookData type - it's a PostCastResponseCast but the type is not exported
 /**
  * Function to generate a message in response to a user's message.
  * @param hookData - The cast triggering the bot.
