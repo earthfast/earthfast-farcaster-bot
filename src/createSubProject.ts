@@ -1,36 +1,8 @@
 import { ethers } from 'ethers';
 import projectMultiplexAbi from '../abi/ProjectMultiplex.json';
-import { JSON_RPC_URL, FARCASTER_BOT_MNEMONIC, SOLANA_CHAIN_ID } from './config';
+import { JSON_RPC_URL, FARCASTER_BOT_MNEMONIC } from './config';
 import { mnemonicToAccount } from 'viem/accounts';
 import { bytesToHex } from 'viem';
-
-// parse user message to get the token ticker, token address, and escrow amount
-export function parseUserMessage(userMessage: string) {
-  // TODO: split on !CREATE and !Create as well
-  // Split on "!create" and take everything after it, then trim whitespace
-  const createParams = userMessage.split('!create')[1]?.trim();
-
-  if (!createParams) {
-    throw new Error(
-      'Invalid message format. Expected: !create <chainId> <token ticker> <token address>',
-    );
-  }
-
-  // Take only the first three space-separated parameters
-  let [chainId, tokenTicker, tokenAddress, ...rest] = createParams.split(' ').filter(Boolean);
-
-  if (!chainId || !tokenTicker || !tokenAddress || (chainId !== SOLANA_CHAIN_ID && !ethers.isAddress(tokenAddress))) {
-    throw new Error(
-      'Missing required parameters. Expected: !create <chainId> <token ticker> <token address>',
-    );
-  }
-
-  if (chainId === 'Solana' || chainId === 'solana' || chainId === 'sol') {
-    chainId = SOLANA_CHAIN_ID;
-  }
-
-  return { chainId, tokenTicker, tokenAddress };
-}
 
 export default async function createSubProject(hookData: any) {
   console.log('creating sub project');
