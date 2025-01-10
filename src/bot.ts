@@ -56,7 +56,9 @@ export async function determineMessageIntent(message: string): Promise<MessageIn
 
   if (hasTokenAddress && hasSiteIntent) {
     // Extract potential token information
-    const words = message.split(' ').filter(Boolean);
+    const words = message
+      .split(/[\s\n]+/) // Split on whitespace and newlines
+      .filter(Boolean);  // Remove empty strings
     let tokenAddress: string | undefined;
 
     // Look for token address pattern
