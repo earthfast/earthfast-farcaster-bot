@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { ethers } from 'ethers';
+import { PublicKey } from '@solana/web3.js';
 
 import { OPENROUTER_API_KEY, PROJECT_BUNDLE_URL, ChainId, CHAIN_CONFIG, SOLANA_CHAIN_ID } from './config';
 import createSubProject from './createSubProject';
@@ -32,6 +33,15 @@ interface MessageIntent {
   tokenAddress?: string;
 }
 
+function isValidSolanaAddress(address: string): boolean {
+  try {
+    new PublicKey(address);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
 export function determineMessageIntent(message: string): MessageIntent {
   // Check if message contains token address-like pattern and keywords about creating/making/building sites
   const hasTokenAddress = /0x[a-fA-F0-9]{40}/.test(message) || 
@@ -45,8 +55,10 @@ export function determineMessageIntent(message: string): MessageIntent {
 
   if (hasTokenAddress && hasSiteIntent) {
     // Extract potential token information
-    const words = message.split(' ');
-    let chainId, tokenTicker, tokenAddress;
+    const words = message.split(' ').filter(Boolean);
+    let chainId: string | undefined,
+        tokenTicker: string | undefined,
+        tokenAddress: string | undefined;
 
     // Look for token address pattern
     for (let i = 0; i < words.length; i++) {
@@ -56,12 +68,10 @@ export function determineMessageIntent(message: string): MessageIntent {
         // Look for potential ticker in surrounding words
         tokenTicker = words[i - 1] || words[i + 1];
         break;
-        // TODO: check if the token address is a solana address
-      } else if (word.toLowerCase().includes('sol')) {
+      } else if (isValidSolanaAddress(word)) {
         chainId = SOLANA_CHAIN_ID;
-        // Look for Solana address pattern
-        tokenAddress = words[i + 1];
-        tokenTicker = words[i - 1] || words[i + 2];
+        tokenAddress = word;
+        tokenTicker = words[i - 1] || words[i + 1];
         break;
       }
     }
@@ -211,12 +221,16 @@ export async function respondToMessage(
   try {
     // Determine the user's intent
     const intent = determineMessageIntent(userMessage);
+    const { chainId, tokenTicker, tokenAddress } = intent;
 
-    if (intent.type === 'chat') {
-      return generateChatResponse(userMessage, parentHash, hookData);
+    if (!chainId || !tokenTicker || !tokenAddress || intent.type === 'chat') {
+      return generateChatResponse(
+        userMessage,
+        parentHash,
+        hookData
+      );
     }
 
-    const { chainId, tokenTicker, tokenAddress } = intent;
     const chainIdParsed = chainId === SOLANA_CHAIN_ID ? SOLANA_CHAIN_ID as ChainId : parseInt(chainId) as ChainId;
 
     // retrieve the token metadata
@@ -255,7 +269,12 @@ export async function respondToMessage(
     console.log('Generated image URL:', imageUrl);
 
     // Create the sub project
-    const receipt = await createSubProject(hookData.data);
+    const receipt = await createSubProject({
+      chainId,
+      tokenTicker,
+      tokenAddress,
+      ...hookData.data
+    });
 
     // Get the sub project ID from the transaction events
     const subProjectCreatedEvent = receipt.logs.find(
