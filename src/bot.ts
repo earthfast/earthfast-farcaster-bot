@@ -33,10 +33,11 @@ interface MessageIntent {
   tokenAddress?: string;
 }
 
-function isValidSolanaAddress(address: string): boolean {
+async function isValidSolanaAddress(address: string): Promise<boolean> {
+  let publicKey: PublicKey;
   try {
-    new PublicKey(address);
-    return true;
+    publicKey = new PublicKey(address);
+    return await PublicKey.isOnCurve(publicKey.toBytes());
   } catch (error) {
     return false;
   }
@@ -46,11 +47,11 @@ export async function determineMessageIntent(message: string): Promise<MessageIn
   // Check if message contains token address-like pattern and keywords about creating/making/building sites
   const hasTokenAddress = /0x[a-fA-F0-9]{40}/.test(message) || 
                          message.includes('sol') || 
-                         message.includes('solana');
-  const siteCreationKeywords = ['create', 'make', 'build', 'generate', 'setup', 'deploy'];
+                         message.includes('solana') ||
+                         message.includes('Solana');
+  const siteCreationKeywords = ['create', 'make', 'build', 'generate', 'setup', 'deploy', 'site', 'page', 'website', 'webpage'];
   const hasSiteIntent = siteCreationKeywords.some(keyword => 
-    message.toLowerCase().includes(keyword) && 
-    (message.toLowerCase().includes('site') || message.toLowerCase().includes('page'))
+    message.toLowerCase().includes(keyword)
   );
 
   if (hasTokenAddress && hasSiteIntent) {
@@ -63,11 +64,13 @@ export async function determineMessageIntent(message: string): Promise<MessageIn
       if (ethers.isAddress(word)) {
         tokenAddress = word;
         break;
-      } else if (isValidSolanaAddress(word)) {
+      } else if (await isValidSolanaAddress(word)) {
         tokenAddress = word;
         break;
       }
     }
+
+    console.log('tokenAddress from determineMessageIntent: ', tokenAddress);
 
     if (tokenAddress) {
       // Use OpenAI to extract chain and ticker information
@@ -75,6 +78,7 @@ export async function determineMessageIntent(message: string): Promise<MessageIn
         Extract the following information from this message about creating a site for a token.
         If you can't determine something with high confidence, return null for that field.
         Message: "${message}"
+        Token Address: "${tokenAddress}"
 
         Required format (JSON):
         {
@@ -83,7 +87,11 @@ export async function determineMessageIntent(message: string): Promise<MessageIn
         }
 
         Rules:
-        - For chainId, if a chain is mentioned, use the associated chainId or if a number is mentioned, use that number for the chainId
+        - For chainId:
+          * If the address is a Solana address (base58 format), use "solana"
+          * If a specific chain is mentioned, use its chainId
+          * If a number is mentioned that could be a chainId, use that number
+          * If unclear, check the address format to determine the chain
         - The token ticker should be a short symbol (like "ETH", "USDC", etc.)
         - If multiple potential tickers are found, choose the one most likely to be associated with ${tokenAddress}
         - Respond only with the JSON object, no other text
@@ -99,6 +107,8 @@ export async function determineMessageIntent(message: string): Promise<MessageIn
         const extractedInfo = JSON.parse(completion.choices[0]?.message?.content || '{}');
         const chainId = extractedInfo.chainId;
         const tokenTicker = extractedInfo.tokenTicker;
+
+        console.log('extractedInfo from determineMessageIntent: ', extractedInfo);
 
         if (chainId && tokenTicker) {
           return {
