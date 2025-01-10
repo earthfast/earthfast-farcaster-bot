@@ -83,7 +83,7 @@ export async function determineMessageIntent(message: string): Promise<MessageIn
         }
 
         Rules:
-        - For chainId, default to "1" (Ethereum) if the chain isn't explicitly mentioned
+        - For chainId, if a chain is mentioned, use the associated chainId or if a number is mentioned, use that number for the chainId
         - The token ticker should be a short symbol (like "ETH", "USDC", etc.)
         - If multiple potential tickers are found, choose the one most likely to be associated with ${tokenAddress}
         - Respond only with the JSON object, no other text
