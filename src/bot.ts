@@ -1,8 +1,9 @@
 import OpenAI from 'openai';
 import { ethers } from 'ethers';
+import { PublicKey } from '@solana/web3.js';
 
 import { OPENROUTER_API_KEY, PROJECT_BUNDLE_URL, ChainId, CHAIN_CONFIG, SOLANA_CHAIN_ID } from './config';
-import createSubProject, { parseUserMessage } from './createSubProject';
+import createSubProject from './createSubProject';
 import { generateAndStoreImage } from './services/imageService';
 import { getMarketData } from './services/marketDataService';
 import character from './character.json';
@@ -24,6 +25,108 @@ const openai = new OpenAI({
     'X-Title': 'PagePlex',
   },
 });
+
+interface MessageIntent {
+  type: 'create_site' | 'chat';
+  chainId?: string;
+  tokenTicker?: string;
+  tokenAddress?: string;
+}
+
+async function isValidSolanaAddress(address: string): Promise<boolean> {
+  let publicKey: PublicKey;
+  try {
+    publicKey = new PublicKey(address);
+    return await PublicKey.isOnCurve(publicKey.toBytes());
+  } catch (error) {
+    return false;
+  }
+}
+
+export async function determineMessageIntent(message: string): Promise<MessageIntent> {
+  // Check if message contains token address-like pattern and keywords about creating/making/building sites
+  const hasTokenAddress = /0x[a-fA-F0-9]{40}/.test(message) || 
+                         message.includes('sol') || 
+                         message.includes('solana') ||
+                         message.includes('Solana');
+  const siteCreationKeywords = ['create', 'make', 'build', 'generate', 'setup', 'deploy', 'site', 'page', 'website', 'webpage'];
+  const hasSiteIntent = siteCreationKeywords.some(keyword => 
+    message.toLowerCase().includes(keyword)
+  );
+
+  if (hasTokenAddress && hasSiteIntent) {
+    console.log('Meant to create a site: ', message);
+    // Extract potential token information
+    const words = message
+      .split(/[\s\n]+/) // Split on whitespace and newlines
+      .filter(Boolean);  // Remove empty strings
+    let tokenAddress: string | undefined;
+
+    // Look for token address pattern
+    for (const word of words) {
+      if (ethers.isAddress(word)) {
+        tokenAddress = word;
+        break;
+      } else if (await isValidSolanaAddress(word)) {
+        tokenAddress = word;
+        break;
+      }
+    }
+
+    if (tokenAddress) {
+      // Use OpenAI to extract chain and ticker information
+      const extractionPrompt = `
+        Extract the following information from this message about creating a site for a token.
+        If you can't determine something with high confidence, return null for that field.
+        Message: "${message}"
+        Token Address: "${tokenAddress}"
+
+        Required format (JSON):
+        {
+          "chainId": "1" for Ethereum, "137" for Polygon, "56" for BSC, "solana" for Solana, "8453" for Base, "42161" for Arbitrum, "10" for Optimism, etc. (or null if unclear),
+          "tokenTicker": "the token's ticker symbol or null if unclear"
+        }
+
+        Rules:
+        - For chainId:
+          * If the address is a Solana address (base58 format), use "solana"
+          * If a specific chain is mentioned, use its chainId
+          * If a number is mentioned that could be a chainId, use that number
+          * If unclear, check the address format to determine the chain
+        - The token ticker should be a short symbol (like "ETH", "USDC", etc.)
+        - If multiple potential tickers are found, choose the one most likely to be associated with ${tokenAddress}
+        - Respond only with the JSON object, no other text
+      `;
+
+      const completion = await openai.chat.completions.create({
+        model: 'openai/gpt-4o-mini',
+        messages: [{ role: 'user', content: extractionPrompt }],
+        response_format: { type: "json_object" }
+      });
+
+      try {
+        const extractedInfo = JSON.parse(completion.choices[0]?.message?.content || '{}');
+        const chainId = extractedInfo.chainId;
+        const tokenTicker = extractedInfo.tokenTicker;
+
+        console.log('extractedInfo from determineMessageIntent: ', extractedInfo);
+
+        if (chainId && tokenTicker) {
+          return {
+            type: 'create_site',
+            chainId,
+            tokenTicker,
+            tokenAddress
+          };
+        }
+      } catch (error) {
+        console.error('Error parsing OpenAI response:', error);
+      }
+    }
+  }
+
+  return { type: 'chat' };
+}
 
 /**
  * Function to generate a contextual prompt for a user's message.
@@ -95,8 +198,43 @@ export async function errorAIResponse(
   return { hash, response: responseContent };
 }
 
-// TODO: need to split this based upon whether the user is trying to create a sub-project or not
-// TODO: update the hookData type - it's a PostCastResponseCast but the type is not exported
+/**
+ * Function to generate a chat response using OpenRouter.
+ */
+async function generateChatResponse(
+  userMessage: string,
+  parentHash: string,
+  hookData: any
+): Promise<{ hash: string; response: string }> {
+  const prompt = await getContextualPrompt(
+    userMessage,
+    'Engage in friendly conversation while staying in character.',
+    hookData.data.hash
+  );
+
+  const completion = await openai.chat.completions.create({
+    model: 'openai/gpt-4o-mini',
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  const responseContent = completion.choices[0]?.message?.content || 
+    'I apologize, but I seem to be having trouble responding right now.';
+  
+  const hash = await publishCast(responseContent, parentHash);
+
+  if (hash) {
+    addMessage({
+      timestamp: Date.now(),
+      role: 'assistant',
+      content: responseContent,
+      castHash: hash,
+      parentHash
+    });
+  }
+
+  return { hash, response: responseContent };
+}
+
 /**
  * Function to generate a message in response to a user's message.
  * @param hookData - The cast triggering the bot.
@@ -105,19 +243,30 @@ export async function respondToMessage(
   hookData: any,
 ): Promise<{ hash: string; response: string; imageUrl?: string }> {
   const parentHash = hookData.data.hash;
+  const userMessage = hookData.data.text;
 
   // Add the incoming user message to history
   addMessage({
     timestamp: new Date(hookData.data.timestamp).getTime(),
     role: 'user',
-    content: hookData.data.text,
+    content: userMessage,
     castHash: hookData.data.hash,
     parentHash: hookData.data.parent_hash || undefined
   });
 
   try {
-    console.log('responding to message');
-    const { chainId, tokenTicker, tokenAddress } = parseUserMessage(hookData.data.text);
+    // Determine the user's intent
+    const intent = await determineMessageIntent(userMessage);
+    const { chainId, tokenTicker, tokenAddress } = intent;
+
+    if (!chainId || !tokenTicker || !tokenAddress || intent.type === 'chat') {
+      return generateChatResponse(
+        userMessage,
+        parentHash,
+        hookData
+      );
+    }
+
     const chainIdParsed = chainId === SOLANA_CHAIN_ID ? SOLANA_CHAIN_ID as ChainId : parseInt(chainId) as ChainId;
 
     // retrieve the token metadata
@@ -128,7 +277,7 @@ export async function respondToMessage(
       Generate a relevant cover image for a crypto token with the ticker ${tokenTicker}
       The token is on the ${CHAIN_CONFIG[chainIdParsed].name} chain.
       The token description is: ${tokenMetadata?.description}.
-      The user asked: ${hookData.data.text}
+      The user asked: ${userMessage}
     `;
 
     // summarize the image prompt to limit harmful content
@@ -156,7 +305,12 @@ export async function respondToMessage(
     console.log('Generated image URL:', imageUrl);
 
     // Create the sub project
-    const receipt = await createSubProject(hookData.data);
+    const receipt = await createSubProject({
+      chainId,
+      tokenTicker,
+      tokenAddress,
+      ...hookData.data
+    });
 
     // Get the sub project ID from the transaction events
     const subProjectCreatedEvent = receipt.logs.find(
@@ -173,7 +327,7 @@ export async function respondToMessage(
       4. Provide a link to the site: ${PROJECT_BUNDLE_URL}${subProjectId}
       5. Avoid endorsing the token or suggesting that the token is a good investment.
     `
-    const prompt = await getContextualPrompt(hookData.data.text, requiredPromptInfo, hookData.data.hash)
+    const prompt = await getContextualPrompt(userMessage, requiredPromptInfo, hookData.data.hash)
 
     // generate the response using the prompt
     const completion = await openai.chat.completions.create({
@@ -209,12 +363,13 @@ export async function respondToMessage(
     });
 
     return { hash, response: responseContent, imageUrl: imageUrl };
+
   } catch (error: any) {
     console.error('error responding to message', error);
     const requiredPromptInfo = `
-      The response must inform the user that the website creation failed and pass on the error message:
+      The response must inform the user that there was an error processing their request:
       - Error: ${error}
-    `
+    `;
     return errorAIResponse(parentHash, hookData, requiredPromptInfo);
   }
 }
