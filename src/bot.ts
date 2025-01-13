@@ -49,7 +49,7 @@ export async function determineMessageIntent(message: string): Promise<MessageIn
                          message.includes('sol') || 
                          message.includes('solana') ||
                          message.includes('Solana');
-  const siteCreationKeywords = ['create', 'make', 'build', 'generate', 'setup', 'deploy', 'site', 'page', 'website', 'webpage'];
+  const siteCreationKeywords = ['create', 'make', 'build', 'generate', 'setup', 'deploy', 'site', 'page', 'website', 'webpage', 'help', 'construct', 'craft', 'produce'];
   const hasSiteIntent = siteCreationKeywords.some(keyword => 
     message.toLowerCase().includes(keyword)
   );
