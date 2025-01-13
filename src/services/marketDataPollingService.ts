@@ -6,7 +6,7 @@ import { JSON_RPC_URL, ChainId } from '../config';
 interface SubProject {
   chainId: number;
   tokenName: string;
-  token: string;
+  tokenAddress: string;
   caster: string;
   castHash: string;
 }
@@ -38,10 +38,10 @@ export class MarketDataPollingService {
         try {
           const subProject: SubProject = await this.contract.subProjects(subProjectId);
           
-          console.log(`Fetching market data for token ${subProject.token} on chain ${subProject.chainId}`);
+          console.log(`Fetching market data for token ${subProject.tokenAddress} on chain ${subProject.chainId}`);
           
           // Get market data for the token
-          const marketData = await getMarketData(subProject.token, subProject.chainId as ChainId);
+          const marketData = await getMarketData(subProject.tokenAddress, subProject.chainId as ChainId);
           
           console.log(`Market data for ${subProject.tokenName}:`, marketData);
         } catch (error) {
