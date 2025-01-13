@@ -252,7 +252,7 @@ const server = Bun.serve({
     }
 
     // Handle incoming cast mentions from neynar webhook
-    if (url.pathname === '/webhook') {
+    async function handleWebhook(req: Request, test: boolean = false) {
       try {
         const hookData = await req.json();
         console.log('Received request', hookData);
@@ -262,12 +262,20 @@ const server = Bun.serve({
         }
 
         // respond to the cast asynchronously and return immediately to avoid duplicate processing
-        Promise.resolve().then(() => respondToMessage(hookData));
+        Promise.resolve().then(() => respondToMessage(hookData, test));
         return new Response(`Replying to the cast`, { status: 200 });
       } catch (e: any) {
         console.error(e);
         return new Response(e.message, { status: 500 });
       }
+    }
+
+    if (url.pathname === '/webhook') {
+      return handleWebhook(req, true);
+    }
+
+    if (url.pathname === '/webhook-test') {
+      return handleWebhook(req, true);
     }
 
     // Handle unknown endpoints
