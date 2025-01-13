@@ -44,6 +44,9 @@ async function isValidSolanaAddress(address: string): Promise<boolean> {
 }
 
 export async function determineMessageIntent(message: string): Promise<MessageIntent> {
+  // log message
+  console.log('message: ', message);
+
   // Check if message contains token address-like pattern and keywords about creating/making/building sites
   const hasTokenAddress = /0x[a-fA-F0-9]{40}/.test(message) || 
                          message.includes('sol') || 
@@ -63,15 +66,31 @@ export async function determineMessageIntent(message: string): Promise<MessageIn
     let tokenAddress: string | undefined;
 
     // Look for token address pattern
+    const addresses = {
+      eth: [] as string[],
+      solana: [] as string[],
+      none: [] as string[]
+    };
+
+    // First collect all addresses
     for (const word of words) {
       if (ethers.isAddress(word)) {
+        addresses.eth.push(word);
         tokenAddress = word;
         break;
       } else if (await isValidSolanaAddress(word)) {
+        addresses.solana.push(word);
         tokenAddress = word;
         break;
+      } else {
+        addresses.none.push(word);
       }
     }
+
+    console.log('Addresses found:');
+    console.log('ETH:', addresses.eth);
+    console.log('Solana:', addresses.solana); 
+    console.log('Invalid:', addresses.none);
 
     if (tokenAddress) {
       // Use OpenAI to extract chain and ticker information
