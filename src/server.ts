@@ -164,7 +164,7 @@ const server = Bun.serve({
       });
     }
 
-    // Protected API endpoints
+    // Image API endpoints
     if (url.pathname.startsWith('/api/')) {
       // Check authentication for all /api/ routes except documentation and list images
       const isPublicEndpoint = url.pathname === '/api' || url.pathname === '/api/images/list';
@@ -271,11 +271,16 @@ const server = Bun.serve({
     }
 
     if (url.pathname === '/webhook') {
-      return handleWebhook(req, true);
+      return handleWebhook(req, false);
     }
 
     if (url.pathname === '/webhook-test') {
       return handleWebhook(req, true);
+    }
+
+    // handle manual trigger of the bot
+    if (url.pathname === '/trigger-site-creation') {
+      return handleWebhook(req, false);
     }
 
     // Handle unknown endpoints
