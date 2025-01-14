@@ -167,7 +167,8 @@ const server = Bun.serve({
     // Protected API endpoints
     if (url.pathname.startsWith('/api/')) {
       // Check authentication for all /api/ routes except documentation and list images
-      if (url.pathname !== '/api' || url.pathname !== '/api/images/list' && !authenticateRequest(req)) {
+      const isPublicEndpoint = url.pathname === '/api' || url.pathname === '/api/images/list';
+      if (!isPublicEndpoint && !authenticateRequest(req)) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
           status: 401,
           headers: {
