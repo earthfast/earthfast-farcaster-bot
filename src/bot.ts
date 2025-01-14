@@ -163,13 +163,13 @@ export async function getContextualPrompt(
 
   // generate a contextual prompt for the bot
   const prompt = `
-    Generate a response (max 320 characters) for a user taking into account the following information:
+    Generate a message (max 320 characters) to a user taking into account the following information:
     - The user message is: ${userMessage}
     - You are a helpful bot named ${character.name}
     - Your bio is: ${character.bio}
     - Your lore is: ${character.lore}
     - Your personality is: ${character.personality}
-    - The response must include the following information: ${requiredResponseInformation}
+    - The message must include the following information: ${requiredResponseInformation}
     ${threadContext ? `\n${threadContext}` : ''}
   `;
   return prompt;
@@ -331,8 +331,6 @@ export async function respondToMessage(
       ],
     });
     const summarizedImagePromptResponseContent = summarizedImagePromptResponse.choices[0]?.message?.content || `Generate a cover image for a crypto token with the ticker ${tokenTicker}`;
-
-    
 
     // generate the image
     const imageAddress = chainIdParsed === SOLANA_CHAIN_ID ? tokenAddress : ethers.getAddress(tokenAddress);
