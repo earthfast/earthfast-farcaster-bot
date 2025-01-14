@@ -7,7 +7,7 @@ import { MarketDataPollingService } from './services/marketDataPollingService';
 import { getTokenMetadata } from './services/metadataService';
 
 // TODO: move CORS headers to a middleware handler
-// CORS headers for /market-data endpoint
+// CORS headers for /data endpoints
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
@@ -16,13 +16,12 @@ const corsHeaders = {
 
 // Authentication middleware
 const authenticateRequest = (req: Request): boolean => {
-  // const authHeader = req.headers.get('Authorization');
-  // if (!authHeader || !authHeader.startsWith('Bearer ')) {
-  //   return false;
-  // }
-  // const token = authHeader.split(' ')[1];
-  // return token === FARCASTER_BOT_API_KEY;
-  return true;
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return false;
+  }
+  const token = authHeader.split(' ')[1];
+  return token === FARCASTER_BOT_API_KEY;
 };
 
 interface GenerateImageRequest {
@@ -167,8 +166,8 @@ const server = Bun.serve({
 
     // Protected API endpoints
     if (url.pathname.startsWith('/api/')) {
-      // Check authentication for all /api/ routes except documentation
-      if (url.pathname !== '/api' && !authenticateRequest(req)) {
+      // Check authentication for all /api/ routes except documentation and list images
+      if (url.pathname !== '/api' || url.pathname !== '/api/images/list' && !authenticateRequest(req)) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
           status: 401,
           headers: {
