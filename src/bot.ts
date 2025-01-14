@@ -11,8 +11,8 @@ import { getTokenMetadata } from './services/metadataService';
 import { publishCast } from './neynarClient';
 import { getContextFromRelatedThreads } from './services/messageHistoryService';
 import { addMessage } from './services/messageHistoryService';
+import { TokenOverride } from '../bin/triggerSiteCreation';
 
-// Validating necessary environment variables or configurations.
 if (!OPENROUTER_API_KEY) {
   throw new Error('OPENROUTER_API_KEY is not defined');
 }
@@ -285,10 +285,21 @@ export async function respondToMessage(
 
   try {
     // Determine the user's intent
-    const intent = await determineMessageIntent(userMessage);
-    const { chainId, tokenTicker, tokenAddress } = intent;
+    let chainId: string | undefined;
+    let tokenTicker: string | undefined;
+    let tokenAddress: string | undefined;
+    let intentType: string | undefined;
+    
+    if (hookData.tokenOverride) {
+      ({ chainId, tokenTicker, tokenAddress } = hookData.tokenOverride);
+      intentType = 'create_site';
+    } else {
+      const intent = await determineMessageIntent(userMessage);
+      ({ chainId, tokenTicker, tokenAddress } = intent);
+      intentType = intent.type;
+    }
 
-    if (!chainId || !tokenTicker || !tokenAddress || intent.type === 'chat') {
+    if (!chainId || !tokenTicker || !tokenAddress || intentType === 'chat') {
       return generateAndPublishChatResponse(
         userMessage,
         parentHash,
@@ -358,7 +369,7 @@ export async function respondToMessage(
       1. Confirm the site creation
       2. Mention the token ${tokenTicker} with address ${tokenAddress} on the ${CHAIN_CONFIG[chainIdParsed].name} chain.
       3. Take into account the token description: ${tokenMetadata?.description} without repeating it to back to the user or overly focusing on the token description.
-      4. Provide a link (do not markdown format it, just provide the url wrapped in parenthesis) to the site: ${PROJECT_BUNDLE_URL}${subProjectId}
+      4. Provide a link (do not markdown format it, always wrap it in parentheses) to the site: ${PROJECT_BUNDLE_URL}${subProjectId}
       5. Avoid endorsing the token or suggesting that the token is a good investment.
     `
     const prompt = await getContextualPrompt(userMessage, requiredPromptInfo, hookData.data.hash)

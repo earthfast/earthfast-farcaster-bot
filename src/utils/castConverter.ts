@@ -1,3 +1,5 @@
+import { TokenOverride } from '../../bin/triggerSiteCreation';
+
 interface WebhookRequest {
   created_at: number;
   type: string;
@@ -36,9 +38,10 @@ interface WebhookRequest {
     };
     mentioned_profiles: any[];
   };
+  tokenOverride?: TokenOverride;
 }
 
-export function convertCastToWebhookFormat(cast: any, overrideCaster?: string): WebhookRequest {
+export function convertCastToWebhookFormat(cast: any, overrideCaster?: string, tokenOverride?: TokenOverride): WebhookRequest {
   // Convert timestamp to Unix timestamp (seconds)
   const created_at = Math.floor(new Date(cast.cast.timestamp).getTime() / 1000);
 
@@ -82,5 +85,6 @@ export function convertCastToWebhookFormat(cast: any, overrideCaster?: string): 
       },
       mentioned_profiles: cast.cast.mentioned_profiles || [],
     },
+    tokenOverride: tokenOverride,
   };
 } 
