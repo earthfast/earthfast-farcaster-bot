@@ -38,9 +38,11 @@ interface WebhookRequest {
   };
 }
 
-export function convertCastToWebhookFormat(cast: any): WebhookRequest {
+export function convertCastToWebhookFormat(cast: any, overrideCaster?: string): WebhookRequest {
   // Convert timestamp to Unix timestamp (seconds)
   const created_at = Math.floor(new Date(cast.cast.timestamp).getTime() / 1000);
+
+  const caster = overrideCaster || cast.cast.author.username;
 
   return {
     created_at,
@@ -59,7 +61,7 @@ export function convertCastToWebhookFormat(cast: any): WebhookRequest {
         object: 'user',
         fid: cast.cast.author.fid,
         custody_address: cast.cast.author.custody_address || '',
-        username: cast.cast.author.username,
+        username: caster,
         display_name: cast.cast.author.display_name,
         pfp_url: cast.cast.author.pfp_url,
         profile: cast.cast.author.profile || {},

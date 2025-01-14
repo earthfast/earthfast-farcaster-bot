@@ -22,7 +22,7 @@ const cast = await neynarClient.lookupCastByHashOrWarpcastUrl({
 console.log('Original cast:', cast);
 
 // Convert the cast to webhook format expected by the bot in respondToMessage
-const webhookFormattedCast = convertCastToWebhookFormat(cast);
+const webhookFormattedCast = convertCastToWebhookFormat(cast, 'memepage');
 console.log('Converted webhook data:', webhookFormattedCast);
 
 // call /trigger-site-creation endpoint to get the bot to respond to the cast
