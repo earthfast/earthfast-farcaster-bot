@@ -33,17 +33,20 @@ interface MessageIntent {
   tokenAddress?: string;
 }
 
-async function isValidSolanaAddress(address: string): Promise<boolean> {
-  let publicKey: PublicKey;
+export function isValidSolanaAddress(address: string): boolean {
   try {
-    publicKey = new PublicKey(address);
-    return await PublicKey.isOnCurve(publicKey.toBytes());
-  } catch (error) {
+    new PublicKey(address);
+    return true;
+  } catch (error: any) {
+    console.log(`[isValidSolanaAddress] error validating solana address ${address}: ${error.message}`);
     return false;
   }
 }
 
 export async function determineMessageIntent(message: string): Promise<MessageIntent> {
+  // log message
+  console.log('[determineMessageIntent]message: ', message);
+
   // Check if message contains token address-like pattern and keywords about creating/making/building sites
   const hasTokenAddress = /0x[a-fA-F0-9]{40}/.test(message) || 
                          message.includes('sol') || 
@@ -63,15 +66,31 @@ export async function determineMessageIntent(message: string): Promise<MessageIn
     let tokenAddress: string | undefined;
 
     // Look for token address pattern
+    const addresses = {
+      eth: [] as string[],
+      solana: [] as string[],
+      none: [] as string[]
+    };
+
+    // First collect all addresses
     for (const word of words) {
       if (ethers.isAddress(word)) {
+        addresses.eth.push(word);
         tokenAddress = word;
         break;
-      } else if (await isValidSolanaAddress(word)) {
+      } else if (isValidSolanaAddress(word)) {
+        addresses.solana.push(word);
         tokenAddress = word;
         break;
+      } else {
+        addresses.none.push(word);
       }
     }
+
+    console.log('Addresses found:');
+    console.log('ETH:', addresses.eth);
+    console.log('Solana:', addresses.solana); 
+    console.log('Invalid:', addresses.none);
 
     if (tokenAddress) {
       // Use OpenAI to extract chain and ticker information
@@ -201,10 +220,11 @@ export async function errorAIResponse(
 /**
  * Function to generate a chat response using OpenRouter.
  */
-async function generateChatResponse(
+async function generateAndPublishChatResponse(
   userMessage: string,
   parentHash: string,
-  hookData: any
+  hookData: any,
+  test: boolean = false
 ): Promise<{ hash: string; response: string }> {
   const prompt = await getContextualPrompt(
     userMessage,
@@ -219,6 +239,11 @@ async function generateChatResponse(
 
   const responseContent = completion.choices[0]?.message?.content || 
     'I apologize, but I seem to be having trouble responding right now.';
+
+  // exit if test
+  if (test) {
+    return { hash: '', response: responseContent };
+  }
   
   const hash = await publishCast(responseContent, parentHash);
 
@@ -241,18 +266,22 @@ async function generateChatResponse(
  */
 export async function respondToMessage(
   hookData: any,
+  test: boolean = false
 ): Promise<{ hash: string; response: string; imageUrl?: string }> {
   const parentHash = hookData.data.hash;
   const userMessage = hookData.data.text;
 
   // Add the incoming user message to history
-  addMessage({
-    timestamp: new Date(hookData.data.timestamp).getTime(),
-    role: 'user',
-    content: userMessage,
-    castHash: hookData.data.hash,
-    parentHash: hookData.data.parent_hash || undefined
-  });
+  if (!test) {
+    console.log('adding message to history');
+    addMessage({
+      timestamp: new Date(hookData.data.timestamp).getTime(),
+      role: 'user',
+      content: userMessage,
+      castHash: hookData.data.hash,
+      parentHash: hookData.data.parent_hash || undefined
+    });
+  }
 
   try {
     // Determine the user's intent
@@ -260,10 +289,11 @@ export async function respondToMessage(
     const { chainId, tokenTicker, tokenAddress } = intent;
 
     if (!chainId || !tokenTicker || !tokenAddress || intent.type === 'chat') {
-      return generateChatResponse(
+      return generateAndPublishChatResponse(
         userMessage,
         parentHash,
-        hookData
+        hookData,
+        test
       );
     }
 
@@ -271,6 +301,10 @@ export async function respondToMessage(
 
     // retrieve the token metadata
     const tokenMetadata = await getTokenMetadata(tokenAddress, chainIdParsed);
+
+    if (!tokenMetadata) {
+      return errorAIResponse(parentHash, hookData, 'The token metadata could not be retrieved.');
+    }
 
     // generate prompt instructions to use for the sub-project site's cover image
     const imagePrompt = `
@@ -298,6 +332,8 @@ export async function respondToMessage(
     });
     const summarizedImagePromptResponseContent = summarizedImagePromptResponse.choices[0]?.message?.content || `Generate a cover image for a crypto token with the ticker ${tokenTicker}`;
 
+    
+
     // generate the image
     const imageAddress = chainIdParsed === SOLANA_CHAIN_ID ? tokenAddress : ethers.getAddress(tokenAddress);
     const tokenKey = `${tokenTicker}-${imageAddress}-${chainIdParsed}`;
@@ -324,7 +360,7 @@ export async function respondToMessage(
       1. Confirm the site creation
       2. Mention the token ${tokenTicker} with address ${tokenAddress} on the ${CHAIN_CONFIG[chainIdParsed].name} chain.
       3. Take into account the token description: ${tokenMetadata?.description} without repeating it to back to the user or overly focusing on the token description.
-      4. Provide a link (not markdown formatted) to the site: ${PROJECT_BUNDLE_URL}${subProjectId}
+      4. Provide a link (do not markdown format it, just provide the url wrapped in parenthesis) to the site: ${PROJECT_BUNDLE_URL}${subProjectId}
       5. Avoid endorsing the token or suggesting that the token is a good investment.
     `
     const prompt = await getContextualPrompt(userMessage, requiredPromptInfo, hookData.data.hash)
