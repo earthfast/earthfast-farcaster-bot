@@ -12,7 +12,7 @@ type CastParamType = 'url' | 'hash';
 // Export the interface for optional parameters
 export interface TokenOverride {
   ticker?: string;
-  chain?: string;
+  chainId?: string;
   tokenAddress?: string;
 }
 
@@ -24,7 +24,7 @@ async function main() {
     const tokenOverride: TokenOverride = {};
     process.argv.slice(4).forEach(arg => {
       if (arg.startsWith('--ticker=')) tokenOverride.ticker = arg.split('=')[1];
-      if (arg.startsWith('--chain=')) tokenOverride.chain = arg.split('=')[1];
+      if (arg.startsWith('--chainId=')) tokenOverride.chainId = arg.split('=')[1];
       if (arg.startsWith('--tokenAddress=')) tokenOverride.tokenAddress = arg.split('=')[1];
     });
     

@@ -85,6 +85,6 @@ export function convertCastToWebhookFormat(cast: any, overrideCaster?: string, t
       },
       mentioned_profiles: cast.cast.mentioned_profiles || [],
     },
-    tokenOverride: tokenOverride,
+    tokenOverride,
   };
 } 
