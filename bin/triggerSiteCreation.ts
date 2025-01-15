@@ -1,7 +1,7 @@
 // call respondToMessage for a provided cast hash or warpcast url
 
 // bun run bin/triggerSiteCreation.ts <cast-hash> <url|hash> --tokenTicker=<value> --chainId=<value> --tokenAddress=<value>
-// bun run bin/triggerSiteCreation.ts 0xd75ba35b9edfd643e703efa279daf0ea7eef1f2e hash --tokenTicker=USDC --chainId=1 --tokenAddress=0x7f5c764cbc14f9669b88837ca1497812d69f500f
+// bun run bin/triggerSiteCreation.ts 0xd75ba35b9edfd643e703efa279daf0ea7eef1f2e hash 'I want to create a site for USDC' --tokenTicker=USDC --chainId=1 --tokenAddress=0x7f5c764cbc14f9669b88837ca1497812d69f500f
 
 import neynarClient from '../src/neynarClient';
 import { convertCastToWebhookFormat } from '../src/utils/castConverter';
@@ -19,10 +19,11 @@ export interface TokenOverride {
 async function main() {
     const identifier = process.argv[2];
     const castParamType = process.argv[3] as CastParamType;
-    
+    const manualTextContext = process.argv[4] || '';
+
     // Parse optional named arguments
     const tokenOverride: TokenOverride = {};
-    process.argv.slice(4).forEach(arg => {
+    process.argv.slice(5).forEach(arg => {
       if (arg.startsWith('--tokenTicker=')) tokenOverride.tokenTicker = arg.split('=')[1];
       if (arg.startsWith('--chainId=')) tokenOverride.chainId = arg.split('=')[1];
       if (arg.startsWith('--tokenAddress=')) tokenOverride.tokenAddress = arg.split('=')[1];
@@ -41,7 +42,7 @@ async function main() {
     console.log('Original cast:', cast);
 
     // Convert the cast to webhook format expected by the bot in respondToMessage
-    const webhookFormattedCast = convertCastToWebhookFormat(cast, 'memepage', tokenOverride);
+    const webhookFormattedCast = convertCastToWebhookFormat(cast, 'memepage', tokenOverride, manualTextContext);
     console.log('Converted webhook data:', webhookFormattedCast);
 
     // call /trigger-site-creation endpoint to get the bot to respond to the cast
