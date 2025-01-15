@@ -1,8 +1,7 @@
-import OpenAI from 'openai';
 import { ethers } from 'ethers';
 import { PublicKey } from '@solana/web3.js';
 
-import { OPENROUTER_API_KEY, PROJECT_BUNDLE_URL, ChainId, CHAIN_CONFIG, SOLANA_CHAIN_ID } from './config';
+import { PROJECT_BUNDLE_URL, ChainId, CHAIN_CONFIG, SOLANA_CHAIN_ID } from './config';
 import createSubProject from './createSubProject';
 import { generateAndStoreImage } from './services/imageService';
 import { getMarketData } from './services/marketDataService';
@@ -11,20 +10,8 @@ import { getTokenMetadata } from './services/metadataService';
 import { publishCast } from './neynarClient';
 import { getContextFromRelatedThreads } from './services/messageHistoryService';
 import { addMessage } from './services/messageHistoryService';
-
-// Validating necessary environment variables or configurations.
-if (!OPENROUTER_API_KEY) {
-  throw new Error('OPENROUTER_API_KEY is not defined');
-}
-
-// Initialize OpenRouter client
-const openai = new OpenAI({
-  baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: OPENROUTER_API_KEY,
-  defaultHeaders: {
-    'X-Title': 'PagePlex',
-  },
-});
+import { TokenOverride } from '../bin/triggerSiteCreation';
+import { AI_MODEL, openai } from './aiClient';
 
 interface MessageIntent {
   type: 'create_site' | 'chat';
@@ -118,7 +105,7 @@ export async function determineMessageIntent(message: string): Promise<MessageIn
       `;
 
       const completion = await openai.chat.completions.create({
-        model: 'openai/gpt-4o-mini',
+        model: AI_MODEL,
         messages: [{ role: 'user', content: extractionPrompt }],
         response_format: { type: "json_object" }
       });
@@ -163,13 +150,13 @@ export async function getContextualPrompt(
 
   // generate a contextual prompt for the bot
   const prompt = `
-    Generate a response (max 320 characters) for a user taking into account the following information:
+    Generate a message (max 320 characters) to a user taking into account the following information:
     - The user message is: ${userMessage}
     - You are a helpful bot named ${character.name}
     - Your bio is: ${character.bio}
     - Your lore is: ${character.lore}
     - Your personality is: ${character.personality}
-    - The response must include the following information: ${requiredResponseInformation}
+    - The message must include the following information: ${requiredResponseInformation}
     ${threadContext ? `\n${threadContext}` : ''}
   `;
   return prompt;
@@ -189,7 +176,7 @@ export async function errorAIResponse(
   const errorPrompt = await getContextualPrompt(hookData.data.text, requiredPromptInfo, hookData.data.hash)
 
   const completion = await openai.chat.completions.create({
-    model: 'openai/gpt-4o-mini',
+    model: AI_MODEL,
     messages: [
       {
         role: 'user',
@@ -233,7 +220,7 @@ async function generateAndPublishChatResponse(
   );
 
   const completion = await openai.chat.completions.create({
-    model: 'openai/gpt-4o-mini',
+    model: AI_MODEL,
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -285,10 +272,21 @@ export async function respondToMessage(
 
   try {
     // Determine the user's intent
-    const intent = await determineMessageIntent(userMessage);
-    const { chainId, tokenTicker, tokenAddress } = intent;
+    let chainId: string | undefined;
+    let tokenTicker: string | undefined;
+    let tokenAddress: string | undefined;
+    let intentType: string | undefined;
+    
+    if (hookData.tokenOverride) {
+      ({ chainId, tokenTicker, tokenAddress } = hookData.tokenOverride);
+      intentType = 'create_site';
+    } else {
+      const intent = await determineMessageIntent(userMessage);
+      ({ chainId, tokenTicker, tokenAddress } = intent);
+      intentType = intent.type;
+    }
 
-    if (!chainId || !tokenTicker || !tokenAddress || intent.type === 'chat') {
+    if (!chainId || !tokenTicker || !tokenAddress || intentType === 'chat') {
       return generateAndPublishChatResponse(
         userMessage,
         parentHash,
@@ -322,7 +320,7 @@ export async function respondToMessage(
       Mention that the image itself should not contain any text, real or imaginary.
     `;
     const summarizedImagePromptResponse = await openai.chat.completions.create({
-      model: 'openai/gpt-4o-mini',
+      model: AI_MODEL,
       messages: [
         {
           role: 'user',
@@ -331,8 +329,6 @@ export async function respondToMessage(
       ],
     });
     const summarizedImagePromptResponseContent = summarizedImagePromptResponse.choices[0]?.message?.content || `Generate a cover image for a crypto token with the ticker ${tokenTicker}`;
-
-    
 
     // generate the image
     const imageAddress = chainIdParsed === SOLANA_CHAIN_ID ? tokenAddress : ethers.getAddress(tokenAddress);
@@ -360,14 +356,14 @@ export async function respondToMessage(
       1. Confirm the site creation
       2. Mention the token ${tokenTicker} with address ${tokenAddress} on the ${CHAIN_CONFIG[chainIdParsed].name} chain.
       3. Take into account the token description: ${tokenMetadata?.description} without repeating it to back to the user or overly focusing on the token description.
-      4. Provide a link (do not markdown format it, just provide the url wrapped in parenthesis) to the site: ${PROJECT_BUNDLE_URL}${subProjectId}
+      4. Provide a link (do not markdown format it, always wrap it in parentheses) to the site: ${PROJECT_BUNDLE_URL}${subProjectId}
       5. Avoid endorsing the token or suggesting that the token is a good investment.
     `
     const prompt = await getContextualPrompt(userMessage, requiredPromptInfo, hookData.data.hash)
 
     // generate the response using the prompt
     const completion = await openai.chat.completions.create({
-      model: 'openai/gpt-4o-mini',
+      model: AI_MODEL,
       messages: [
         {
           role: 'user',
