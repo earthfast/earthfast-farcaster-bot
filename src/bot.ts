@@ -1,8 +1,7 @@
-import OpenAI from 'openai';
 import { ethers } from 'ethers';
 import { PublicKey } from '@solana/web3.js';
 
-import { OPENROUTER_API_KEY, PROJECT_BUNDLE_URL, ChainId, CHAIN_CONFIG, SOLANA_CHAIN_ID } from './config';
+import { PROJECT_BUNDLE_URL, ChainId, CHAIN_CONFIG, SOLANA_CHAIN_ID } from './config';
 import createSubProject from './createSubProject';
 import { generateAndStoreImage } from './services/imageService';
 import { getMarketData } from './services/marketDataService';
@@ -12,19 +11,7 @@ import { publishCast } from './neynarClient';
 import { getContextFromRelatedThreads } from './services/messageHistoryService';
 import { addMessage } from './services/messageHistoryService';
 import { TokenOverride } from '../bin/triggerSiteCreation';
-
-if (!OPENROUTER_API_KEY) {
-  throw new Error('OPENROUTER_API_KEY is not defined');
-}
-
-// Initialize OpenRouter client
-const openai = new OpenAI({
-  baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: OPENROUTER_API_KEY,
-  defaultHeaders: {
-    'X-Title': 'PagePlex',
-  },
-});
+import { AI_MODEL, openai } from './aiClient';
 
 interface MessageIntent {
   type: 'create_site' | 'chat';
@@ -118,7 +105,7 @@ export async function determineMessageIntent(message: string): Promise<MessageIn
       `;
 
       const completion = await openai.chat.completions.create({
-        model: 'openai/gpt-4o-mini',
+        model: AI_MODEL,
         messages: [{ role: 'user', content: extractionPrompt }],
         response_format: { type: "json_object" }
       });
@@ -189,7 +176,7 @@ export async function errorAIResponse(
   const errorPrompt = await getContextualPrompt(hookData.data.text, requiredPromptInfo, hookData.data.hash)
 
   const completion = await openai.chat.completions.create({
-    model: 'openai/gpt-4o-mini',
+    model: AI_MODEL,
     messages: [
       {
         role: 'user',
@@ -233,7 +220,7 @@ async function generateAndPublishChatResponse(
   );
 
   const completion = await openai.chat.completions.create({
-    model: 'openai/gpt-4o-mini',
+    model: AI_MODEL,
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -334,7 +321,7 @@ export async function respondToMessage(
       Mention that the image itself should not contain any text, real or imaginary.
     `;
     const summarizedImagePromptResponse = await openai.chat.completions.create({
-      model: 'openai/gpt-4o-mini',
+      model: AI_MODEL,
       messages: [
         {
           role: 'user',
@@ -377,7 +364,7 @@ export async function respondToMessage(
 
     // generate the response using the prompt
     const completion = await openai.chat.completions.create({
-      model: 'openai/gpt-4o-mini',
+      model: AI_MODEL,
       messages: [
         {
           role: 'user',

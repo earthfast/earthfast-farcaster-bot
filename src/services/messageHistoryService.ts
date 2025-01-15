@@ -1,14 +1,4 @@
-import OpenAI from 'openai';
-import { OPENROUTER_API_KEY } from '../config';
-
-// Initialize OpenRouter client for summarization
-const openai = new OpenAI({
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: OPENROUTER_API_KEY,
-    defaultHeaders: {
-        'X-Title': 'PagePlex',
-    },
-});
+import { AI_MODEL, openai } from '../aiClient';
 
 export interface BotMessage {
     timestamp: number;
@@ -216,7 +206,7 @@ async function summarizeThread(messages: BotMessage[]): Promise<string> {
     `;
 
     const completion = await openai.chat.completions.create({
-        model: 'openai/gpt-4o-mini',
+        model: AI_MODEL,
         messages: [
             {
                 role: 'user',
