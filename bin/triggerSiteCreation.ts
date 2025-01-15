@@ -1,7 +1,7 @@
 // call respondToMessage for a provided cast hash or warpcast url
 
-// bun run bin/triggerSiteCreation.ts <cast-hash> <url|hash>
-// bun run bin/triggerSiteCreation.ts 0xd75ba35b9edfd643e703efa279daf0ea7eef1f2e hash
+// bun run bin/triggerSiteCreation.ts <cast-hash> <url|hash> --tokenTicker=<value> --chainId=<value> --tokenAddress=<value>
+// bun run bin/triggerSiteCreation.ts 0xd75ba35b9edfd643e703efa279daf0ea7eef1f2e hash --tokenTicker=USDC --chainId=1 --tokenAddress=0x7f5c764cbc14f9669b88837ca1497812d69f500f
 
 import neynarClient from '../src/neynarClient';
 import { convertCastToWebhookFormat } from '../src/utils/castConverter';

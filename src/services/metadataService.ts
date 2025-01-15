@@ -40,6 +40,7 @@ const metadataCache: Record<string, CacheEntry> = {};
 const CACHE_DURATION = 24 * 60 * 60 * 1000;
 
 export async function getTokenMetadata(address: string, chainId: ChainId): Promise<TokenMetadata | null> {
+    console.log('getting token metadata for', address, chainId);
     const cacheKey = `${address}-${chainId}`;
     const now = Date.now();
 
