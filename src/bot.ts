@@ -278,8 +278,7 @@ export async function respondToMessage(
     let intentType: string | undefined;
     
     if (hookData.tokenOverride) {
-      ({ chainId, tokenAddress } = hookData.tokenOverride);
-      tokenTicker = hookData.tokenOverride.ticker;
+      ({ chainId, tokenTicker, tokenAddress } = hookData.tokenOverride);
       intentType = 'create_site';
     } else {
       const intent = await determineMessageIntent(userMessage);

@@ -11,8 +11,8 @@ type CastParamType = 'url' | 'hash';
 
 // Export the interface for optional parameters
 export interface TokenOverride {
-  ticker?: string;
   chainId?: string;
+  tokenTicker?: string;
   tokenAddress?: string;
 }
 
@@ -23,27 +23,27 @@ async function main() {
     // Parse optional named arguments
     const tokenOverride: TokenOverride = {};
     process.argv.slice(4).forEach(arg => {
-      if (arg.startsWith('--ticker=')) tokenOverride.ticker = arg.split('=')[1];
+      if (arg.startsWith('--tokenTicker=')) tokenOverride.tokenTicker = arg.split('=')[1];
       if (arg.startsWith('--chainId=')) tokenOverride.chainId = arg.split('=')[1];
       if (arg.startsWith('--tokenAddress=')) tokenOverride.tokenAddress = arg.split('=')[1];
     });
-    
+
     if (!identifier || !castParamType) {
-        console.error('Usage: bun run bin/triggerSiteCreation.ts <cast-hash> <url|hash> [--ticker=<value>] [--chain=<value>] [--tokenAddr=<value>]');
+        console.error('Usage: bun run bin/triggerSiteCreation.ts <cast-hash> <url|hash> [--tokenTicker=<value>] [--chainId=<value>] [--tokenAddress=<value>]');
         process.exit(1);
     }
-    
+
     // get the cast from neynar
     const cast = await neynarClient.lookupCastByHashOrWarpcastUrl({
         identifier,
         type: castParamType.toLowerCase() as CastParamType // Ensure type is CastParamType
     });
     console.log('Original cast:', cast);
-    
+
     // Convert the cast to webhook format expected by the bot in respondToMessage
     const webhookFormattedCast = convertCastToWebhookFormat(cast, 'memepage', tokenOverride);
     console.log('Converted webhook data:', webhookFormattedCast);
-    
+
     // call /trigger-site-creation endpoint to get the bot to respond to the cast
     const response = await fetch('http://localhost:3000/trigger-site-creation', {
         method: 'POST',
