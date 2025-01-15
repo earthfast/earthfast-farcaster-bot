@@ -358,6 +358,7 @@ export async function respondToMessage(
       3. Take into account the token description: ${tokenMetadata?.description} without repeating it to back to the user or overly focusing on the token description.
       4. Provide a link (do not markdown format it, always wrap it in parentheses) to the site: ${PROJECT_BUNDLE_URL}${subProjectId}
       5. Avoid endorsing the token or suggesting that the token is a good investment.
+      6. Take into account the following context, if provided: ${hookData?.manualTextContext}
     `
     const prompt = await getContextualPrompt(userMessage, requiredPromptInfo, hookData.data.hash)
 

@@ -39,9 +39,15 @@ interface WebhookRequest {
     mentioned_profiles: any[];
   };
   tokenOverride?: TokenOverride;
+  manualTextContext?: string;
 }
 
-export function convertCastToWebhookFormat(cast: any, overrideCaster?: string, tokenOverride?: TokenOverride): WebhookRequest {
+export function convertCastToWebhookFormat(
+  cast: any,
+  overrideCaster?: string,
+  tokenOverride?: TokenOverride,
+  manualTextContext?: string
+): WebhookRequest {
   // Convert timestamp to Unix timestamp (seconds)
   const created_at = Math.floor(new Date(cast.cast.timestamp).getTime() / 1000);
 
@@ -86,5 +92,6 @@ export function convertCastToWebhookFormat(cast: any, overrideCaster?: string, t
       mentioned_profiles: cast.cast.mentioned_profiles || [],
     },
     tokenOverride,
+    manualTextContext,
   };
 }
